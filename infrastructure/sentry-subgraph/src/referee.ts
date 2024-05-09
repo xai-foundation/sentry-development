@@ -88,7 +88,6 @@ export function handleAssertionSubmitted(event: AssertionSubmittedEvent): void {
   const sentryKey = SentryKey.load(event.params.nodeLicenseId.toString())
   if (sentryKey) {
     submission.sentryKey = event.params.nodeLicenseId.toString()
-    submission.save()
   }
 
   let assertionStateRootOrConfirmData: Bytes = Bytes.fromI32(0);
@@ -142,6 +141,8 @@ export function handleAssertionSubmitted(event: AssertionSubmittedEvent): void {
 
   submission.eligibleForPayout = eligibleForPayout
   submission.assertionsStateRootOrConfirmData = assertionStateRootOrConfirmData.toString()
+  
+  submission.save()
 
   if (submission.eligibleForPayout) {
     if (challenge) {
