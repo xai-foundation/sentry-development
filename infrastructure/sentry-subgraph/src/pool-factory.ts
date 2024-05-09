@@ -34,10 +34,22 @@ export function handleInitialized(event: Initialized): void {
 
   const poolFactory = PoolFactory.bind(event.address)
   poolConfig.version = BigInt.fromI32(event.params.version)
-  poolConfig.unstakeKeysDelayPeriod = poolFactory.unstakeKeysDelayPeriod()
-  poolConfig.unstakeGenesisKeyDelayPeriod = poolFactory.unstakeGenesisKeyDelayPeriod()
-  poolConfig.unstakeEsXaiDelayPeriod = poolFactory.unstakeEsXaiDelayPeriod()
-  poolConfig.updateRewardBreakdownDelayPeriod = poolFactory.updateRewardBreakdownDelayPeriod()
+  if (event.params.version == 1) {
+    poolConfig.unstakeKeysDelayPeriod = BigInt.fromI32(60)
+    poolConfig.unstakeGenesisKeyDelayPeriod = BigInt.fromI32(180)
+    poolConfig.unstakeEsXaiDelayPeriod = BigInt.fromI32(60)
+    poolConfig.updateRewardBreakdownDelayPeriod = BigInt.fromI32(120)
+  } else if (event.params.version == 2) {
+    poolConfig.unstakeKeysDelayPeriod = poolFactory.unstakeKeysDelayPeriod()
+    poolConfig.unstakeGenesisKeyDelayPeriod = poolFactory.unstakeGenesisKeyDelayPeriod()
+    poolConfig.unstakeEsXaiDelayPeriod = poolFactory.unstakeEsXaiDelayPeriod()
+    poolConfig.updateRewardBreakdownDelayPeriod = BigInt.fromI32(270)
+  } else {
+    poolConfig.unstakeKeysDelayPeriod = poolFactory.unstakeKeysDelayPeriod()
+    poolConfig.unstakeGenesisKeyDelayPeriod = poolFactory.unstakeGenesisKeyDelayPeriod()
+    poolConfig.unstakeEsXaiDelayPeriod = poolFactory.unstakeEsXaiDelayPeriod()
+    poolConfig.updateRewardBreakdownDelayPeriod = poolFactory.updateRewardBreakdownDelayPeriod()
+  }
   poolConfig.save();
 }
 
