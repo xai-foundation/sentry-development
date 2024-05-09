@@ -73,6 +73,11 @@ export function handleInitialized(event: Initialized): void {
 
 
 export function handleAssertionSubmitted(event: AssertionSubmittedEvent): void {
+
+  if (event.block.number.lt(BigInt.fromI32(32124545))) {
+    return;
+  }
+
   const challenge = Challenge.load(event.params.challengeId.toString())
   let submission = new Submission(event.params.challengeId.toString() + event.params.nodeLicenseId.toString())
   submission.nodeLicenseId = event.params.nodeLicenseId
@@ -209,7 +214,10 @@ export function handleBatchRewardsClaimed(event: BatchRewardsClaimedEvent): void
     const decoded = ethereum.decode('(uint256[],uint256,address)', dataToDecode)
     if (decoded) {
       const nodeLicenseIds = decoded.toTuple()[0].toBigIntArray()
-      const reward = challenge.rewardAmountForClaimers.div(challenge.numberOfEligibleClaimers)
+      let reward: BigInt = BigInt.fromI32(0);
+      if (challenge.numberOfEligibleClaimers.gt(BigInt.fromI32(0))) {
+        reward = challenge.rewardAmountForClaimers.div(challenge.numberOfEligibleClaimers)
+      }
 
       for (let i = 0; i < nodeLicenseIds.length; i++) {
         const submission = Submission.load(event.params.challengeId.toString() + nodeLicenseIds[i].toString())
