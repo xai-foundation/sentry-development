@@ -237,7 +237,10 @@ export function handleBatchRewardsClaimed(event: BatchRewardsClaimedEvent): void
   }
 
   const nodeLicenseIds = decoded.toTuple()[0].toBigIntArray()
-  const reward = challenge.rewardAmountForClaimers.div(challenge.numberOfEligibleClaimers)
+  let reward = BigInt.fromI32(0)
+  if(challenge.numberOfEligibleClaimers.gt(BigInt.fromI32(0))){
+    reward = challenge.rewardAmountForClaimers.div(challenge.numberOfEligibleClaimers)
+  }
 
   for (let i = 0; i < nodeLicenseIds.length; i++) {
     const submission = Submission.load(event.params.challengeId.toString() + nodeLicenseIds[i].toString())
