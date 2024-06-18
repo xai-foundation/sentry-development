@@ -228,6 +228,9 @@ export function handleChallengeExpired(event: ChallengeExpiredEvent): void {
 }
 
 export function handleChallengeSubmitted(event: ChallengeSubmittedEvent): void {
+  if (event.block.number.gt(BigInt.fromI32(54276146)) && event.block.number.lt(BigInt.fromI32(54330951))) {
+    return;
+  }
   // create an entity for the challenge
   let challenge = new Challenge(event.params.challengeNumber.toString())
 
