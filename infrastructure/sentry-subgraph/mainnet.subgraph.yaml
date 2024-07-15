@@ -133,4 +133,4 @@ dataSources:
       eventHandlers:
         - event: ConvertedToEsXai(indexed address,uint256)
           handler: handleConvertedToEsXai
-      file: ./src/xai.ts
+      file: ./src/tiny-keys-airdrop.ts
