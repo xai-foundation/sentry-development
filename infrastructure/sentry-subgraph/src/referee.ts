@@ -95,7 +95,7 @@ export function handleAssertionSubmitted(event: AssertionSubmittedEvent): void {
     log.warning("Failed to find refereeConfig handleAssertionSubmitted TX: " + event.transaction.hash.toHexString(), [])
     return;
   }
-  if (refereeConfig.version.gt(BigInt.fromI32(6))) {
+  if (refereeConfig.version.gt(BigInt.fromI32(9))) {
     // Event replaced in newer versions of the Referee for simpler event handlers
     return;
   }
@@ -270,7 +270,7 @@ export function handleRewardsClaimed(event: RewardsClaimedEvent): void {
     log.warning("Failed to find refereeConfig handleRewardsClaimed TX: " + event.transaction.hash.toHexString(), [])
     return;
   }
-  if (refereeConfig.version.gt(BigInt.fromI32(6))) {
+  if (refereeConfig.version.gt(BigInt.fromI32(9))) {
     // Event replaced in newer versions of the Referee for simpler event handlers
     return;
   }
@@ -382,7 +382,7 @@ export function handleBatchRewardsClaimed(event: BatchRewardsClaimedEvent): void
     log.warning("Failed to find refereeConfig handleBatchRewardsClaimed TX: " + event.transaction.hash.toHexString(), [])
     return;
   }
-  if (refereeConfig.version.gt(BigInt.fromI32(6))) {
+  if (refereeConfig.version.gt(BigInt.fromI32(9))) {
     // Event replaced in newer versions of the Referee for simpler event handlers
     return;
   }
