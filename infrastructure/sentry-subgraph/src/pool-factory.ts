@@ -66,6 +66,7 @@ export function handleInitialized(event: Initialized): void {
   poolConfig.save();
 }
 
+
 export function handleStakeKeys(event: StakeKeys): void {
 
   let pool = PoolInfo.load(event.params.pool.toHexString());
@@ -99,17 +100,27 @@ export function handleStakeKeys(event: StakeKeys): void {
 
   //Check if this is triggered from the tiny keys aidrop admin stake 
   // processAirdropSegmentOnlyStake (0xd65f202a)
-  if (signature == "0xd65f202a") {
+  // sepolia start processAirdropSegmentOnlyStake(uint256 keyId) (0x3ada44c1)
+  if (signature == "0xd65f202a" || signature == "0x3ada44c1") {
 
     const dataToDecode = getInputFromEvent(event, true)
-    const decoded = ethereum.decode('(uint256[])', dataToDecode)
+    let decoded: ethereum.Value | null;
     let autoStakeKeyIds: BigInt[];
 
-    if (decoded) {
-      autoStakeKeyIds = decoded.toTuple()[0].toBigIntArray();
+    if (signature == "0x3ada44c1") {
+      decoded = ethereum.decode('(uint256)', dataToDecode)
+      if (!decoded) {
+        log.warning("Failed to decode handleStakeKeys, processAirdropSegmentOnlyStake TX: " + event.transaction.hash.toHexString(), [])
+        return;
+      }
+      autoStakeKeyIds = [decoded.toTuple()[0].toBigInt()];
     } else {
-      log.warning("Failed to decode handleStakeKeys, processAirdropSegmentOnlyStake TX: " + event.transaction.hash.toHexString(), [])
-      return;
+      decoded = ethereum.decode('(uint256[])', dataToDecode)
+      if (!decoded) {
+        log.warning("Failed to decode handleStakeKeys, processAirdropSegmentOnlyStake TX: " + event.transaction.hash.toHexString(), [])
+        return;
+      }
+      autoStakeKeyIds = decoded.toTuple()[0].toBigIntArray();
     }
 
     const airdropContract = TinyKeysAirdrop.bind(event.transaction.to!)
@@ -159,6 +170,7 @@ export function handleStakeKeys(event: StakeKeys): void {
     }
   }
 }
+
 
 export function handleUnstakeKeys(event: UnstakeKeys): void {
 
