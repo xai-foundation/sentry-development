@@ -560,12 +560,12 @@ const loadOperatorKeysFromGraph = async (
 
     // Load SentryKey objects from the subgraph
     // Ony load keys that are not staked
-    const assignedPool = '0x';
-    const sentryKeys = await retry(() => getSentryKeysFromGraphByPool(
+    const assignedPools = ['0x'];
+    const sentryKeys = await retry(() => getSentryKeysFromGraph(
         wallets.map(w => w.address),
-        assignedPool,
+        assignedPools,
         true,
-        { }
+        { latestChallengeNumber, eligibleForPayout: true , claimed: false }
     ));
 
     const sentryWalletMap: { [owner: string]: SentryWallet } = {}
