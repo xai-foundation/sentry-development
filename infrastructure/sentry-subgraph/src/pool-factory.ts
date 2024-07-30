@@ -1,4 +1,4 @@
-import { Address, BigInt, ethereum, log } from "@graphprotocol/graph-ts";
+import { Address, bigInt, BigInt, ethereum, log } from "@graphprotocol/graph-ts";
 import {
   StakeKeys,
   UnstakeKeys,
@@ -20,9 +20,11 @@ import {
   UnstakeRequest,
   PoolFactoryConfig,
   SentryWallet,
+  PoolStake,
 } from "../generated/schema"
 import { getInputFromEvent } from "./utils/getInputFromEvent";
 import { getTxSignatureFromEvent } from "./utils/getTxSignatureFromEvent";
+import { TinyKeysAirdrop } from "../generated/TinyKeysAirdrop/TinyKeysAirdrop"
 
 function handlePoolBreakdown(pool: PoolInfo, currentTime: BigInt): void {
   if (pool.updateSharesTimestamp.gt(BigInt.fromI32(0)) && currentTime.gt(pool.updateSharesTimestamp)) {
@@ -46,12 +48,25 @@ export function handleInitialized(event: Initialized): void {
 
   const poolFactory = PoolFactory.bind(event.address)
   poolConfig.version = BigInt.fromI32(event.params.version)
-  poolConfig.unstakeKeysDelayPeriod = poolFactory.unstakeKeysDelayPeriod()
-  poolConfig.unstakeGenesisKeyDelayPeriod = poolFactory.unstakeGenesisKeyDelayPeriod()
-  poolConfig.unstakeEsXaiDelayPeriod = poolFactory.unstakeEsXaiDelayPeriod()
-  poolConfig.updateRewardBreakdownDelayPeriod = poolFactory.updateRewardBreakdownDelayPeriod()
+  if (event.params.version == 1) {
+    poolConfig.unstakeKeysDelayPeriod = BigInt.fromI32(60)
+    poolConfig.unstakeGenesisKeyDelayPeriod = BigInt.fromI32(180)
+    poolConfig.unstakeEsXaiDelayPeriod = BigInt.fromI32(60)
+    poolConfig.updateRewardBreakdownDelayPeriod = BigInt.fromI32(120)
+  } else if (event.params.version == 2) {
+    poolConfig.unstakeKeysDelayPeriod = poolFactory.unstakeKeysDelayPeriod()
+    poolConfig.unstakeGenesisKeyDelayPeriod = poolFactory.unstakeGenesisKeyDelayPeriod()
+    poolConfig.unstakeEsXaiDelayPeriod = poolFactory.unstakeEsXaiDelayPeriod()
+    poolConfig.updateRewardBreakdownDelayPeriod = BigInt.fromI32(270)
+  } else {
+    poolConfig.unstakeKeysDelayPeriod = poolFactory.unstakeKeysDelayPeriod()
+    poolConfig.unstakeGenesisKeyDelayPeriod = poolFactory.unstakeGenesisKeyDelayPeriod()
+    poolConfig.unstakeEsXaiDelayPeriod = poolFactory.unstakeEsXaiDelayPeriod()
+    poolConfig.updateRewardBreakdownDelayPeriod = poolFactory.updateRewardBreakdownDelayPeriod()
+  }
   poolConfig.save();
 }
+
 
 export function handleStakeKeys(event: StakeKeys): void {
 
@@ -80,23 +95,104 @@ export function handleStakeKeys(event: StakeKeys): void {
     log.warning("Failed to find sentryWallet on handleStakeKeys: TX: " + event.transaction.hash.toHexString(), []);
   }
 
-  const dataToDecode = getInputFromEvent(event, true)
-  const decoded = ethereum.decode('(address,uint256[])', dataToDecode);
-  if (decoded) {
-    let nodeLicenseIds = decoded.toTuple()[1].toBigIntArray();
-    for (let i = 0; i < nodeLicenseIds.length; i++) {
-      let sentryKey = SentryKey.load(nodeLicenseIds[i].toString())
-      if (sentryKey) {
-        sentryKey.assignedPool = event.params.pool
-        sentryKey.save()
-      } else {
-        log.warning("Failed to find sentryKey on handleStakeKeys: TX: " + event.transaction.hash.toHexString() + ", keyId: " + nodeLicenseIds[i].toString(), []);
+  let nodeLicenseIds: BigInt[];
+
+  const signature = getTxSignatureFromEvent(event);
+
+  //Check if this is triggered from the tiny keys aidrop admin stake 
+  // processAirdropSegmentOnlyStake (0xd65f202a)
+  // sepolia start processAirdropSegmentOnlyStake(uint256 keyId) (0x3ada44c1)
+  if (signature == "0xd65f202a" || signature == "0x3ada44c1") {
+
+    const dataToDecode = getInputFromEvent(event, true)
+    let decoded: ethereum.Value | null;
+    let autoStakeKeyIds: BigInt[];
+
+    if (signature == "0x3ada44c1") {
+      decoded = ethereum.decode('(uint256)', dataToDecode)
+      if (!decoded) {
+        log.warning("Failed to decode handleStakeKeys, processAirdropSegmentOnlyStake TX: " + event.transaction.hash.toHexString(), [])
+        return;
+      }
+      autoStakeKeyIds = [decoded.toTuple()[0].toBigInt()];
+    } else {
+      decoded = ethereum.decode('(uint256[])', dataToDecode)
+      if (!decoded) {
+        log.warning("Failed to decode handleStakeKeys, processAirdropSegmentOnlyStake TX: " + event.transaction.hash.toHexString(), [])
+        return;
+      }
+      autoStakeKeyIds = decoded.toTuple()[0].toBigIntArray();
+    }
+
+    const airdropContract = TinyKeysAirdrop.bind(event.transaction.to!)
+
+    nodeLicenseIds = [];
+
+    for (let i = 0; i < autoStakeKeyIds.length; i++) {
+      let sentryKey = SentryKey.load(autoStakeKeyIds[i].toString())
+      if(!sentryKey){
+        log.warning("Failed to find sentryKey on handleStakeKeys, processAirdropSegmentOnlyStake: TX: " + event.transaction.hash.toHexString() + ", keyId: " + autoStakeKeyIds[i].toString(), []);
+        continue;
+      }
+      
+      //Only process the keys mintend from the key id staked in the pool of the event.
+      //On process could have multiple keys in different pools, we don't need to reprocess them for each stake event.
+      if (sentryKey.assignedPool == event.params.pool) {
+
+        const start = airdropContract.keyToStartEnd(autoStakeKeyIds[i], BigInt.fromI32(0));
+        const end = airdropContract.keyToStartEnd(autoStakeKeyIds[i], BigInt.fromI32(1));
+
+        const keyLength = end.minus(start).toI32();
+
+        for (let j = 0; j < keyLength; j++) {
+          nodeLicenseIds.push(start.plus(BigInt.fromI32(j)))
+        }
       }
     }
+
   } else {
-    log.warning("Failed to decode handleStakeKeys TX: " + event.transaction.hash.toHexString(), [])
+    const dataToDecode = getInputFromEvent(event, true)
+    const decoded = ethereum.decode('(address,uint256[])', dataToDecode);
+
+    if (decoded) {
+      nodeLicenseIds = decoded.toTuple()[1].toBigIntArray();
+    } else {
+      log.warning("Failed to decode handleStakeKeys TX: " + event.transaction.hash.toHexString(), [])
+      return;
+    }
   }
+
+  for (let i = 0; i < nodeLicenseIds.length; i++) {
+    let sentryKey = SentryKey.load(nodeLicenseIds[i].toString())
+    if (sentryKey) {
+      sentryKey.assignedPool = event.params.pool
+      sentryKey.save()
+    } else {
+      log.warning("Failed to find sentryKey on handleStakeKeys: TX: " + event.transaction.hash.toHexString() + ", keyId: " + nodeLicenseIds[i].toString(), []);
+    }
+  }
+
+  // Update the Users Pool Stake 
+  const poolStakeId = event.params.pool.toHexString() + "_" +  event.params.user.toHexString();
+  const poolStake = PoolStake.load(poolStakeId);
+
+  // If the stake does not exist, create a new one
+  if (!poolStake) {
+    const poolStake = new PoolStake(poolStakeId);
+    poolStake.id = poolStakeId;
+    poolStake.pool = event.params.pool.toHexString();
+    poolStake.wallet = event.params.user.toHexString();
+    poolStake.keyStakeAmount = event.params.amount;
+    poolStake.esXaiStakeAmount = BigInt.fromI32(0);
+    poolStake.save();
+  } else {
+    // If the stake exists, update the key stake amount
+    poolStake.keyStakeAmount = poolStake.keyStakeAmount.plus(event.params.amount);
+    poolStake.save();
+  }
+
 }
+
 
 export function handleUnstakeKeys(event: UnstakeKeys): void {
 
@@ -135,6 +231,19 @@ export function handleUnstakeKeys(event: UnstakeKeys): void {
       } else {
         log.warning("Failed to find sentryKey on handleUnstakeKeys: TX: " + event.transaction.hash.toHexString() + ", keyId: " + nodeLicenseIds[i].toString(), []);
       }
+    }
+
+    // Update the Users Pool Stake 
+    const poolStakeId = event.params.pool.toHexString() + "_" +  event.params.user.toHexString();
+    const poolStake = PoolStake.load(poolStakeId);
+
+    // If the stake does not exist, log a warning
+    if (!poolStake) {
+      log.warning("Failed to find poolStake on handleUnstakeKeys: TX: " + event.transaction.hash.toHexString() + ", poolStakeId: " + poolStakeId, []);
+    } else {
+      // If the stake exists, update the key stake amount
+      poolStake.keyStakeAmount = poolStake.keyStakeAmount.minus(event.params.amount);
+      poolStake.save();
     }
 
     let index = decoded.toTuple()[1].toBigInt()
@@ -236,6 +345,26 @@ export function handleStakeEsXai(event: StakeEsXai): void {
 
   sentryWallet.esXaiStakeAmount = sentryWallet.esXaiStakeAmount.plus(event.params.amount)
   sentryWallet.save();
+  
+  // Update the Users Pool Stake 
+  const poolStakeId = event.params.pool.toHexString() + "_" +  event.params.user.toHexString();
+  const poolStake = PoolStake.load(poolStakeId);
+
+  // If the stake does not exist, create a new one
+  if (!poolStake) {
+    const poolStake = new PoolStake(poolStakeId);
+    poolStake.id = poolStakeId;
+    poolStake.pool = event.params.pool.toHexString();
+    poolStake.wallet = event.params.user.toHexString();
+    poolStake.keyStakeAmount = BigInt.fromI32(0);
+    poolStake.esXaiStakeAmount = event.params.amount;
+    poolStake.save();
+  } else {
+    // If the stake exists, update the key stake amount
+    poolStake.esXaiStakeAmount = poolStake.esXaiStakeAmount.plus(event.params.amount);
+    poolStake.save();
+  }
+
 }
 
 export function handleUnstakeEsXai(event: UnstakeEsXai): void {
@@ -254,6 +383,19 @@ export function handleUnstakeEsXai(event: UnstakeEsXai): void {
     sentryWallet.save();
   } else {
     log.warning("Failed to find sentryWallet on handleUnstakeEsXai: TX: " + event.transaction.hash.toHexString(), []);
+  }
+  
+  // Update the Users Pool Stake 
+  const poolStakeId = event.params.pool.toHexString() + "_" +  event.params.user.toHexString();
+  const poolStake = PoolStake.load(poolStakeId);
+
+  // If the stake does not exist, log a warning
+  if (!poolStake) {
+    log.warning("Failed to find poolStake on handleUnstakeEsXai: TX: " + event.transaction.hash.toHexString() + ", poolStakeId: " + poolStakeId, []);
+  } else {
+    // If the stake exists, update the key stake amount
+    poolStake.esXaiStakeAmount = poolStake.esXaiStakeAmount.minus(event.params.amount);
+    poolStake.save();
   }
 
   const dataToDecode = getInputFromEvent(event, false)
