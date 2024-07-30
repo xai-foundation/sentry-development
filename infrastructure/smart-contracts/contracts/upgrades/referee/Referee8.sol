@@ -205,24 +205,13 @@ contract Referee8 is Initializable, AccessControlEnumerableUpgradeable {
     event StakedV1(address indexed user, uint256 amount, uint256 totalStaked);
     event UnstakeV1(address indexed user, uint256 amount, uint256 totalStaked);
 
-    function initialize() public reinitializer(6) {
-        maxStakeAmountPerLicense = 20000 * 10 ** 18;
-        maxKeysPerPool = 1000;
-
-        stakeAmountTierThresholds[0] = 30_000 * 10 ** 18;
-        stakeAmountTierThresholds[1] = 2_000_000 * 10 ** 18;
-        stakeAmountTierThresholds[2] = 4_000_000 * 10 ** 18;
-        stakeAmountTierThresholds[3] = 8_000_000 * 10 ** 18;
-
-        stakeAmountBoostFactors[0] = 150;
-        stakeAmountBoostFactors[1] = 200;
-        stakeAmountBoostFactors[2] = 300;
-        stakeAmountBoostFactors[3] = 700;
-    }
-
     modifier onlyPoolFactory() {
         require(msg.sender == poolFactoryAddress, "1");
         _;
+    }
+
+    function initialize() public reinitializer(5) {
+        stakeAmountBoostFactors[0] = 10000;
     }
 
     /**
@@ -339,7 +328,7 @@ contract Referee8 is Initializable, AccessControlEnumerableUpgradeable {
      * @notice Add a wallet to the KYC'd list.
      * @param wallet The wallet to be added.
      */
-    function addKycWallet(address wallet) external onlyRole(KYC_ADMIN_ROLE) {
+    function addKycWallet(address wallet) external {
         kycWallets.add(wallet);
         emit KycStatusChanged(wallet, true);
     }
@@ -348,7 +337,7 @@ contract Referee8 is Initializable, AccessControlEnumerableUpgradeable {
      * @notice Remove a wallet from the KYC'd list.
      * @param wallet The wallet to be removed.
      */
-    function removeKycWallet(address wallet) external onlyRole(KYC_ADMIN_ROLE) {
+    function removeKycWallet(address wallet) external {
         kycWallets.remove(wallet);
         emit KycStatusChanged(wallet, false);
     }
@@ -632,8 +621,8 @@ contract Referee8 is Initializable, AccessControlEnumerableUpgradeable {
         require(challengeToClaimFor.createdTimestamp != 0, "18");
         // Check if the challenge is closed for submissions
         require(!challengeToClaimFor.openForSubmissions, "19");
-        // expire the challenge if 270 days old
-        if (block.timestamp >= challengeToClaimFor.createdTimestamp + 270 days) {
+        // expire the challenge if 180 days old
+        if (block.timestamp >= challengeToClaimFor.createdTimestamp + 180 days) {
             expireChallengeRewards(_challengeId);
             return;
         }
@@ -696,8 +685,8 @@ contract Referee8 is Initializable, AccessControlEnumerableUpgradeable {
         require(challengeToClaimFor.createdTimestamp != 0, "25");
         // Check if the challenge is closed for submissions
         require(!challengeToClaimFor.openForSubmissions, "26");
-        // expire the challenge if 270 days old
-        if (block.timestamp >= challengeToClaimFor.createdTimestamp + 270 days) {
+        // expire the challenge if 180 days old
+        if (block.timestamp >= challengeToClaimFor.createdTimestamp + 180 days) {
             expireChallengeRewards(_challengeId);
             return;
         }
@@ -799,15 +788,15 @@ contract Referee8 is Initializable, AccessControlEnumerableUpgradeable {
     }
 
     /**
-     * @notice Expires the rewards for a challenge if it is at least 270 days old.
+     * @notice Expires the rewards for a challenge if it is at least 180 days old.
      * @param _challengeId The ID of the challenge.
      */
     function expireChallengeRewards(uint256 _challengeId) public {
         // check the challenge exists by checking the timestamp is not 0
         require(challenges[_challengeId].createdTimestamp != 0, "28");
 
-        // Check if the challenge is at least 270 days old
-        require(block.timestamp >= challenges[_challengeId].createdTimestamp + 270 days, "29");
+        // Check if the challenge is at least 180 days old
+        require(block.timestamp >= challenges[_challengeId].createdTimestamp + 180 days, "29");
 
         // Check the challenge isn't already expired
         require(challenges[_challengeId].expiredForRewarding == false, "30");
@@ -848,6 +837,14 @@ contract Referee8 is Initializable, AccessControlEnumerableUpgradeable {
             }
         }
         return stakeAmountBoostFactors[length - 1];
+    }
+    
+    /**
+     * @notice Enables staking on the Referee.
+     */
+    function enableStaking() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        stakingEnabled = true;
+        emit StakingEnabled();
     }
     
     /**
@@ -999,5 +996,11 @@ contract Referee8 is Initializable, AccessControlEnumerableUpgradeable {
     function unstakeEsXai(address pool, uint256 amount) external onlyPoolFactory {
         require(stakedAmounts[pool] >= amount, "50");
         stakedAmounts[pool] -= amount;
+    }
+
+    function DEV_stakeV1(uint256 amount) external {
+        esXai(esXaiAddress).transferFrom(msg.sender, address(this), amount);
+        stakedAmounts[msg.sender] += amount;
+        emit StakedV1(msg.sender, amount, stakedAmounts[msg.sender]);
     }
 }

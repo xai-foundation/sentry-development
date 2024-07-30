@@ -1,27 +1,24 @@
 import hardhat from "hardhat";
 const { ethers, upgrades } = hardhat;
 //TODO Add current proxy contract address to update
-const address = "0x4C749d097832DE2FEcc989ce18fDc5f1BD76700c";
-const maxKeys = BigInt(10); // TODO get this value from management to set the max number of keys
+const address = "0x5776784C2012887D1f2FA17281E406643CBa5330";
+const foundationReceiver = "0x490A5C858458567Bd58774C123250de11271f165"
+const foundationBasePoints = BigInt(500);
 
 
 async function main() {
     const [deployer] = (await ethers.getSigners());
     const deployerAddress = await deployer.getAddress();
     console.log("Deployer address", deployerAddress);
-    const esXai3 = await ethers.getContractFactory("esXai3");
-    console.log("Got factory");await upgrades.upgradeProxy(address, esXai3,
-         { call: { fn: "initialize",
-            args: [
-                config.refereeAddress,
-                config.nodeLicenseAddress, 
-                maxKeys
-            ] } });
+    const esXai2 = await ethers.getContractFactory("contracts/upgrades/node-license/esXai3.sol:esXai3");
+    console.log("Got factory");
+    await upgrades.upgradeProxy(address, esXai2);
     console.log("Upgraded");
 
     await run("verify:verify", {
         address: address,
         constructorArguments: [],
+        contract: "contracts/upgrades/node-license/esXai3.sol:esXai3"
     });
     console.log("verified")
 }
@@ -31,4 +28,4 @@ async function main() {
 main().catch((error) => {
     console.error(error);
     process.exitCode = 1;
-});
+  });

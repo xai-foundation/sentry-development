@@ -214,7 +214,7 @@ contract Referee5 is Initializable, AccessControlEnumerableUpgradeable {
         address _poolFactoryAddress
     ) public reinitializer(4) {
         poolFactoryAddress = _poolFactoryAddress;
-        maxKeysPerPool = 600;
+        maxKeysPerPool = 5000;
     }
 
     /**
@@ -928,24 +928,10 @@ contract Referee5 is Initializable, AccessControlEnumerableUpgradeable {
     /**
      * @dev Looks up payout boostFactor based on the staking tier for a staker wallet.
      * @param staker The address of the staker or pool.
-     * @return The payout chance boostFactor based on max stake capacity or staked amount.
+     * @return The payout chance boostFactor.
      */
     function getBoostFactorForStaker(address staker) external view returns (uint256) {
-
-        uint256 stakedAmount = stakedAmounts[staker];
-
-        if(PoolFactory(poolFactoryAddress).poolsCreatedViaFactory(staker)){
-			if (assignedKeysToPoolCount[staker] * maxStakeAmountPerLicense < stakedAmount) {
-				stakedAmount = assignedKeysToPoolCount[staker] * maxStakeAmountPerLicense;
-			}
-        }else{			
-			uint256 ownerUnstakedAmount = NodeLicense(nodeLicenseAddress).balanceOf(staker) - assignedKeysOfUserCount[staker];
-			if (ownerUnstakedAmount * maxStakeAmountPerLicense < stakedAmount) {
-				stakedAmount = ownerUnstakedAmount * maxStakeAmountPerLicense;
-			}
-        }
-
-        return _getBoostFactor(stakedAmount);
+        return _getBoostFactor(stakedAmounts[staker]);
     }
 
     /**
@@ -999,5 +985,11 @@ contract Referee5 is Initializable, AccessControlEnumerableUpgradeable {
     function unstakeEsXai(address pool, uint256 amount) external onlyPoolFactory {
         require(stakedAmounts[pool] >= amount, "50");
         stakedAmounts[pool] -= amount;
+    }
+
+    function DEV_stakeV1(uint256 amount) external {
+        esXai(esXaiAddress).transferFrom(msg.sender, address(this), amount);
+        stakedAmounts[msg.sender] += amount;
+        emit StakedV1(msg.sender, amount, stakedAmounts[msg.sender]);
     }
 }

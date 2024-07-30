@@ -64,7 +64,7 @@ import "../../staking-v2/PoolFactory.sol";
 // 49: Maximum staking amount exceeded.
 // 50: Invalid amount.
 
-contract Referee7 is Initializable, AccessControlEnumerableUpgradeable {
+contract Referee13 is Initializable, AccessControlEnumerableUpgradeable {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     // Define roles
@@ -205,11 +205,26 @@ contract Referee7 is Initializable, AccessControlEnumerableUpgradeable {
     event StakedV1(address indexed user, uint256 amount, uint256 totalStaked);
     event UnstakeV1(address indexed user, uint256 amount, uint256 totalStaked);
 
+    function initialize() public reinitializer(8) {
+        maxStakeAmountPerLicense = 2000000 * 10 ** 18;
+        maxKeysPerPool = 100000;
+
+        stakeAmountTierThresholds[0] = 3_000_00 * 10 ** 18;
+        stakeAmountTierThresholds[1] = 30_000_00 * 10 ** 18;
+        stakeAmountTierThresholds[2] = 400_000_00 * 10 ** 18;
+        stakeAmountTierThresholds[3] = 1_500_000_00 * 10 ** 18;
+
+        stakeAmountBoostFactors[0] = 150;
+        stakeAmountBoostFactors[1] = 200;
+        stakeAmountBoostFactors[2] = 600;
+        stakeAmountBoostFactors[3] = 1000;
+    }
+
     modifier onlyPoolFactory() {
         require(msg.sender == poolFactoryAddress, "1");
         _;
     }
-
+    
     /**
      * @notice Returns the combined total supply of esXai Xai, and the unminted allocated tokens.
      * @dev This function fetches the total supply of esXai, Xai, and unminted allocated tokens and returns their sum.
@@ -222,7 +237,7 @@ contract Referee7 is Initializable, AccessControlEnumerableUpgradeable {
     /**
      * @notice Toggles the assertion checking.
      */
-    function toggleAssertionChecking() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function toggleAssertionChecking() external {
         isCheckingAssertions = !isCheckingAssertions;
         emit AssertionCheckingToggled(isCheckingAssertions);
     }
@@ -231,7 +246,7 @@ contract Referee7 is Initializable, AccessControlEnumerableUpgradeable {
      * @notice Sets the challengerPublicKey.
      * @param _challengerPublicKey The public key of the challenger.
      */
-    function setChallengerPublicKey(bytes memory _challengerPublicKey) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setChallengerPublicKey(bytes memory _challengerPublicKey) external {
         challengerPublicKey = _challengerPublicKey;
         emit ChallengerPublicKeyChanged(_challengerPublicKey);
     }
@@ -240,7 +255,7 @@ contract Referee7 is Initializable, AccessControlEnumerableUpgradeable {
      * @notice Sets the rollupAddress.
      * @param _rollupAddress The address of the rollup.
      */
-    function setRollupAddress(address _rollupAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setRollupAddress(address _rollupAddress) external {
         rollupAddress = _rollupAddress;
         emit RollupAddressChanged(_rollupAddress);
     }
@@ -249,7 +264,7 @@ contract Referee7 is Initializable, AccessControlEnumerableUpgradeable {
      * @notice Sets the nodeLicenseAddress.
      * @param _nodeLicenseAddress The address of the NodeLicense NFT.
      */
-    function setNodeLicenseAddress(address _nodeLicenseAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setNodeLicenseAddress(address _nodeLicenseAddress) external {
         nodeLicenseAddress = _nodeLicenseAddress;
         emit NodeLicenseAddressChanged(_nodeLicenseAddress);
     }
@@ -836,18 +851,10 @@ contract Referee7 is Initializable, AccessControlEnumerableUpgradeable {
     }
     
     /**
-     * @notice Enables staking on the Referee.
-     */
-    function enableStaking() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        stakingEnabled = true;
-        emit StakingEnabled();
-    }
-    
-    /**
      * @dev Admin update the maximum staking amount per NodeLicense
      * @param newAmount The new maximum amount per NodeLicense
      */
-    function updateMaxStakePerLicense(uint256 newAmount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function updateMaxStakePerLicense(uint256 newAmount) external {
         require(newAmount != 0, "31");
         uint256 prevAmount = maxStakeAmountPerLicense;
         maxStakeAmountPerLicense = newAmount;
@@ -858,7 +865,7 @@ contract Referee7 is Initializable, AccessControlEnumerableUpgradeable {
      * @dev Admin update the maximum number of NodeLicense staked in a pool
      * @param newAmount The new maximum amount per NodeLicense
      */
-    function updateMaxKeysPerPool(uint256 newAmount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function updateMaxKeysPerPool(uint256 newAmount) external {
         require(newAmount != 0, "32");
         uint256 prevAmount = maxKeysPerPool;
         maxKeysPerPool = newAmount;
@@ -871,9 +878,9 @@ contract Referee7 is Initializable, AccessControlEnumerableUpgradeable {
      * @param newThreshold The new threshold of the tier
      * @param newBoostFactor The new boost factor for the tier
      */
-    function updateStakingTier(uint256 index, uint256 newThreshold, uint256 newBoostFactor) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function updateStakingTier(uint256 index, uint256 newThreshold, uint256 newBoostFactor) external {
 
-        require(newBoostFactor > 0 && newBoostFactor <= 100, "33");
+        require(newBoostFactor > 0 && newBoostFactor <= 10000, "33");
 
         uint256 lastIndex = stakeAmountTierThresholds.length - 1;
         if (index == 0) {
@@ -893,8 +900,8 @@ contract Referee7 is Initializable, AccessControlEnumerableUpgradeable {
      * @param newThreshold The new threshold of the tier
      * @param newBoostFactor The new boost factor for the tier
      */
-    function addStakingTier(uint256 newThreshold, uint256 newBoostFactor) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(newBoostFactor > 0 && newBoostFactor <= 100, "37");
+    function addStakingTier(uint256 newThreshold, uint256 newBoostFactor) external {
+        require(newBoostFactor > 0 && newBoostFactor <= 10000, "37");
 
         uint256 lastIndex = stakeAmountTierThresholds.length - 1;
         require(stakeAmountTierThresholds[lastIndex] < newThreshold, "38");
@@ -907,7 +914,7 @@ contract Referee7 is Initializable, AccessControlEnumerableUpgradeable {
      * @dev Admin remove a staking tier
      * @param index The index if the tier to remove
      */
-    function removeStakingTier(uint256 index) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function removeStakingTier(uint256 index) external {
         require(stakeAmountTierThresholds.length > 1, "39");
         require(index < stakeAmountTierThresholds.length, "40");
         for (uint i = index; i < stakeAmountTierThresholds.length - 1; i++) {

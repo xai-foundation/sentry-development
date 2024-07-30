@@ -2,12 +2,18 @@
 
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/Base64Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "../../upgrades/referee/Referee16.sol";
 
-contract NodeLicense8 is ERC721EnumerableUpgradeable, AccessControlUpgradeable {
+interface IAggregatorV3Interface {
+    function latestAnswer() external view returns (int256);
+}
+
+contract NodeLicense10 is ERC721EnumerableUpgradeable, AccessControlUpgradeable {
     using StringsUpgradeable for uint256;
     using CountersUpgradeable for CountersUpgradeable.Counter;
     CountersUpgradeable.Counter private _tokenIds;
@@ -41,11 +47,50 @@ contract NodeLicense8 is ERC721EnumerableUpgradeable, AccessControlUpgradeable {
     mapping (address => uint16) public whitelistAmounts;
 
     /**
+     *  @dev New promo code mappings are ONLY used for 
+     *  reward tracking of XAI and esXAI rewards
+     *  The original promo code mapping is used for promo
+     *  code creation, removal, activation and recipient tracking
+     * 
+     *  @notice The new mappings should not be checked for 
+     *  promo code existence or activation, they simply track 
+     *  the referral rewards for XAI and esXAI 
+     */
+
+    // Mapping from promo code to PromoCode struct for Xai
+    mapping (string => PromoCode) private _promoCodesXai;
+
+    // Mapping from promo code to PromoCode struct for esXai
+    mapping (string => PromoCode) private _promoCodesEsXai;
+
+    // Mapping from referral address to referral reward
+    mapping (address => uint256) private _referralRewardsXai;
+
+    // Mapping from referral address to referral reward
+    mapping (address => uint256) private _referralRewardsEsXai;
+
+    // Chainlink Eth/USD price feed
+    IAggregatorV3Interface internal ethPriceFeed;
+
+    //Chainlink XAI/USD price feed
+    IAggregatorV3Interface internal xaiPriceFeed;
+
+    // Token Addresses
+    address public xaiAddress;
+    address public esXaiAddress;
+
+    // Pause Minting
+    bool public mintingPaused;
+
+    bytes32 public constant AIRDROP_ADMIN_ROLE = keccak256("AIRDROP_ADMIN_ROLE");
+
+
+    /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[499] private __gap;
+    uint256[491] private __gap;
 
     // Define the pricing tiers
     struct Tier {
@@ -62,16 +107,33 @@ contract NodeLicense8 is ERC721EnumerableUpgradeable, AccessControlUpgradeable {
 
     event PromoCodeCreated(string promoCode, address recipient);
     event PromoCodeRemoved(string promoCode);
-    event RewardClaimed(address indexed claimer, uint256 amount);
+    event RewardClaimed(address indexed claimer, uint256 ethAmount, uint256 xaiAmount, uint256 esXaiAmount);
     event PricingTierSetOrAdded(uint256 index, uint256 price, uint256 quantity);
     event ReferralRewardPercentagesChanged(uint256 referralDiscountPercentage, uint256 referralRewardPercentage);
-    event RefundOccurred(address indexed refundee, uint256 amount);
     event ReferralReward(address indexed buyer, address indexed referralAddress, uint256 amount);
-    event FundsWithdrawn(address indexed admin, uint256 amount);
     event FundsReceiverChanged(address indexed admin, address newFundsReceiver);
     event ClaimableChanged(address indexed admin, bool newClaimableState);
     event WhitelistAmountUpdatedByAdmin(address indexed redeemer, uint16 newAmount);
     event WhitelistAmountRedeemed(address indexed redeemer, uint16 newAmount);
+
+    // /**
+    //  * @notice Initializes the NodeLicense contract.
+    //  * 
+    //  */
+
+    // function initialize(address _xaiAddress,  address _esXaiAddress, address ethPriceFeedAddress, address xaiPriceFeedAddress, address airdropAdmin) public reinitializer(8) {
+    //     require(_xaiAddress != address(0), "Invalid xai address");
+    //     require(_esXaiAddress != address(0), "Invalid esXai address");
+    //     require(ethPriceFeedAddress != address(0), "Invalid ethPriceFeed address");
+    //     require(xaiPriceFeedAddress != address(0), "Invalid xaiPriceFeed address");
+    //     ethPriceFeed = IAggregatorV3Interface(ethPriceFeedAddress);
+    //     xaiPriceFeed = IAggregatorV3Interface(xaiPriceFeedAddress);
+    //     xaiAddress = _xaiAddress;
+    //     esXaiAddress = _esXaiAddress;
+        
+    //     // Grant the airdrop admin role to the airdrop admin address
+    //     _grantRole(AIRDROP_ADMIN_ROLE, airdropAdmin);
+    // }
 
     /**
      * @notice Creates a new promo code.
@@ -80,6 +142,8 @@ contract NodeLicense8 is ERC721EnumerableUpgradeable, AccessControlUpgradeable {
      */
     function createPromoCode(string calldata _promoCode, address _recipient) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_recipient != address(0), "Recipient address cannot be zero");
+        require(_promoCodes[_promoCode].recipient == address(0), "Promo code already exists");
+        require(bytes(_promoCode).length > 0, "Promo code cannot be empty");
         _promoCodes[_promoCode] = PromoCode(_recipient, true, 0);
         emit PromoCodeCreated(_promoCode, _recipient);
     }
@@ -111,80 +175,224 @@ contract NodeLicense8 is ERC721EnumerableUpgradeable, AccessControlUpgradeable {
         return pricingTiers.length;
     }
 
-    function mintDev(uint256 _amount) external {
-        require(
-            _tokenIds.current() + _amount <= maxSupply,
-            "Exceeds maxSupply"
-        );
-        
-        for (uint256 i = 0; i < _amount; i++) {
-            _tokenIds.increment();
-            uint256 newItemId = _tokenIds.current();
-            _mint(msg.sender, newItemId);
-
-            // Record the minting timestamp
-            _mintTimestamps[newItemId] = block.timestamp;
-        }
-    }
-
     /**
      * @notice Mints new NodeLicense tokens.
      * @param _amount The amount of tokens to mint.
      * @param _promoCode The promo code.
      */
     function mint(uint256 _amount, string calldata _promoCode) public payable {
-        require(
-            _tokenIds.current() + _amount <= maxSupply,
-            "Exceeds maxSupply"
-        );
-        PromoCode memory promoCode = _promoCodes[_promoCode];
-        require(
-            (promoCode.recipient != address(0) && promoCode.active) || bytes(_promoCode).length == 0,
-            "Invalid or inactive promo code"
-        );
-        require(
-            promoCode.recipient != msg.sender,
-            "Referral address cannot be the sender's address"
-        );
+        // Validate the mint data
+        _validateMint(_amount);
 
+        // Calculate the final price and average cost
         uint256 finalPrice = price(_amount, _promoCode);
         uint256 averageCost = msg.value / _amount;
 
+        // Confirm that the ether value sent is correct
         require(msg.value >= finalPrice, "Ether value sent is not correct");
 
-        for (uint256 i = 0; i < _amount; i++) {
-            _tokenIds.increment();
-            uint256 newItemId = _tokenIds.current();
-            _mint(msg.sender, newItemId);
+        // Mint the NodeLicense tokens
+        _mintNodeLicense(_amount, averageCost, msg.sender);
 
-            // Record the minting timestamp
-            _mintTimestamps[newItemId] = block.timestamp;
+        // Calculate the referral reward and determine if the promo code is an address
+        (uint256 referralReward, address recipientAddress)  = _calculateReferralReward(finalPrice, _promoCode);
 
-            // Record the average cost
-            _averageCost[newItemId] = averageCost;
-        }
-
-        // Calculate the referral reward
-        uint256 referralReward = 0;
-        if (promoCode.recipient != address(0)) {
-            referralReward = finalPrice * referralRewardPercentage / 100;
-            _referralRewards[promoCode.recipient] += referralReward;
+        // Update the promo code mappings for Eth rewards
+        if(referralReward > 0){
+            // Use promo original code mapping for codes & new mappings for reward tracking
             _promoCodes[_promoCode].receivedLifetime += referralReward;
-            emit ReferralReward(msg.sender, promoCode.recipient, referralReward);
+            _referralRewards[recipientAddress] += referralReward;            
         }
 
+        // Send the funds to the fundsReceiver
         uint256 remainder = msg.value - finalPrice;
-        (bool sent, bytes memory data) = fundsReceiver.call{value: finalPrice - referralReward}("");
+        (bool sent,) = fundsReceiver.call{value: finalPrice - referralReward}("");
         require(sent, "Failed to send Ether");
 
         // Send back the remainder amount
         if (remainder > 0) {
-            (bool sentRemainder, bytes memory dataRemainder) = msg.sender.call{value: remainder}("");
+            (bool sentRemainder,) = msg.sender.call{value: remainder}("");
             require(sentRemainder, "Failed to send back the remainder Ether");
         }
     }
 
+    /**
+     * @notice Mints new NodeLicense tokens using XAI/esXai as payment.
+     * @param _amount The amount of tokens to mint.
+     * @param _promoCode The promo code.
+     * @param _useEsXai a boolean to determine if the payment is in XAI or esXai
+     */
+    function mintWithXai(uint256 _amount, string calldata _promoCode, bool _useEsXai, uint256 _expectedCost) public {
+
+        _validateMint(_amount);
+
+        uint256 finalEthPrice = price(_amount, _promoCode);
+        // Convert the final price to XAI
+        uint256 finalPrice = ethToXai(finalEthPrice);
+
+        // Confirm the final price does not exceed the expected cost
+        require(_expectedCost >= finalPrice, "Price Exceeds Expected Cost");
+
+        uint256 averageCost = finalEthPrice / _amount;
+
+        _mintNodeLicense(_amount, averageCost, msg.sender);
+
+        // Calculate the referral reward and determine if the promo code is an address
+        (uint256 referralReward, address recipientAddress)  = _calculateReferralReward(finalPrice, _promoCode);
+        
+        IERC20 token = IERC20(_useEsXai ? esXaiAddress : xaiAddress);
+        token.transferFrom(msg.sender, address(this), finalPrice);
+        token.transfer(fundsReceiver, finalPrice - referralReward);
+
+        if(referralReward > 0){
+            // Store the referral reward in the appropriate mapping
+            if(_useEsXai){
+                _promoCodesEsXai[_promoCode].receivedLifetime += referralReward;
+                _referralRewardsEsXai[recipientAddress] += referralReward;
+            } else {
+                _promoCodesXai[_promoCode].receivedLifetime += referralReward;
+                _referralRewardsXai[recipientAddress] += referralReward;
+            }
+        }     
+    }
+
+    /**
+     * @notice Start the airdrop process
+     * @dev Only callable by the airdrop admin
+     * pauses mintting until completion of the airdrop
+     */
+
+    function startAirdrop(address refereeAddress) external onlyRole(AIRDROP_ADMIN_ROLE) {
+        mintingPaused = true;
+        Referee16(refereeAddress).setStakingEnabled(false);
+    }
+
+    function finishAirdrop(address refereeAddress, uint256 keyMultiplier) external onlyRole(AIRDROP_ADMIN_ROLE) {
+        updatePricingAndQuantity(keyMultiplier);
+        mintingPaused = false;
+        Referee16(refereeAddress).setStakingEnabled(true);
+    }
+
+    function mintForAirdrop(uint256 _qtyToMint, address _theRecipient) external onlyRole(AIRDROP_ADMIN_ROLE) {
+        _mintNodeLicense(_qtyToMint, 0, _theRecipient);
+    }
+
+    /**
+    * @notice Revokes the airdrop admin role for the address passed in
+    * @param _address The address to revoke the airdrop admin role from
+    * @dev Only callable by the airdrop admin
+    */
+
+    function revokeAirdropAdmin(address _address) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        revokeRole(AIRDROP_ADMIN_ROLE, _address);
+    }
     
+
+
+    /**
+     * @notice Validate new mint request
+     * @dev this is called internally to validate the minting process
+     * @param _amount The amount of tokens to mint.
+     */
+    function _validateMint(uint256 _amount) internal view {
+        require(
+            _tokenIds.current() + _amount <= maxSupply,
+            "Exceeds maxSupply"
+        );
+
+        require(!mintingPaused, "Minting is paused");
+    }
+
+    /** 
+     * @notice internal function to mint new NodeLicense tokens
+     * @param _amount The amount of tokens to mint.
+     */
+    function _mintNodeLicense(uint256 _amount, uint256 averageCost, address _receiver) internal {
+        // uint256 [] memory tokenIds = new uint256[](_amount);
+        for (uint256 i = 0; i < _amount; i++) {
+            _tokenIds.increment();
+            uint256 newItemId = _tokenIds.current();
+            _mint(_receiver, newItemId);
+             // Record the minting timestamp
+            _mintTimestamps[newItemId] = block.timestamp;
+            // Record the average cost
+            _averageCost[newItemId] = averageCost;
+        }
+        // return tokenIds;
+    }
+
+    /**
+     * @notice Calculates the referral reward based on the promo code
+     * @dev the promo code may be a string, or an address, but will be passed
+     * as a string to this function
+     * @param _finalPrice The final cost of the minting
+     * @param _promoCode The promo code used
+     * @return A tuple containing the referral reward and an address with 0 address indicating the promo code was not an address
+     */
+    function _calculateReferralReward(uint256 _finalPrice, string memory _promoCode) internal returns(uint256, address) {
+        // If the promo code is empty, return 0
+        if(bytes(_promoCode).length == 0){
+            return (0, address(0));
+        }
+
+        // Retrieve the promo code from storage if it exists
+        PromoCode memory promoCode = _promoCodes[_promoCode];
+        uint256 referralReward = 0;
+        
+        // Check if the promo code already exists in the mappings
+        if(promoCode.recipient != address(0)){
+
+            // Promo code exists in the mapping
+            // If the promo code is not active, return 0
+            if (!promoCode.active) {
+                return (0,  address(0));
+            }
+
+            // Confirm the recipient is not the sender
+            require(promoCode.recipient != msg.sender, "Referral address cannot be the sender's address");
+
+            // Calculate the referral reward
+            referralReward = _finalPrice * referralRewardPercentage / 100;
+            emit ReferralReward(msg.sender, promoCode.recipient, referralReward);
+
+            return (referralReward, promoCode.recipient);
+            
+        }else{
+        // If promo code does not exist in the mapping
+
+        // Check if the promo code is an address
+        address promoCodeAsAddress = validateAndConvertAddress(_promoCode);
+
+        // If the promo code is an address, determine if the recipient has been set
+        if(promoCodeAsAddress != address(0)){
+
+            // Confirm the promo code is not the sender's address
+            require(promoCodeAsAddress != msg.sender, "Referral address cannot be the sender's address");
+
+            // Get the node license balance of the promo code address
+            if(this.balanceOf(promoCodeAsAddress) == 0){
+                // If the promo code is an address, the address must own at least one node license
+                return (0, address(0));
+            }
+
+
+            // Set the promo code recipient to the address
+            _promoCodes[_promoCode].recipient = promoCodeAsAddress;
+            _promoCodes[_promoCode].active = true;            
+
+            // Calculate the referral reward
+            referralReward = _finalPrice * referralRewardPercentage / 100;
+            emit ReferralReward(msg.sender, promoCodeAsAddress, referralReward);
+
+            return (referralReward, promoCodeAsAddress);
+        }
+
+        // If the promo code is not in the existing mappings and is not an address
+        return (0, address(0));
+        }
+    }
+
+
     /**
      * @notice Public function to redeem tokens from on whitelist.
      */
@@ -249,12 +457,24 @@ contract NodeLicense8 is ERC721EnumerableUpgradeable, AccessControlUpgradeable {
         }
 
         require(remaining == 0, "Not enough licenses available for sale");
-
-        // Apply discount if promo code is active
+        // Apply discount if promo code is active otherwise check if promo code is an address
+        // If promocode is an address and owns a license, apply discount
         if (_promoCodes[_promoCode].active) {
             totalCost = totalCost * (100 - referralDiscountPercentage) / 100;
-        }
+        }else{
+            // Check if the promo code is an address
+            // Returns 0 address if not an address
+            address promoCodeAsAddress = validateAndConvertAddress(_promoCode);
 
+            // If the promo code is a valid address, check if it owns a license
+            if(promoCodeAsAddress != address(0)){
+
+                // If the address owns a license, apply discount
+                if(this.balanceOf(promoCodeAsAddress) > 0){
+                    totalCost = totalCost * (100 - referralDiscountPercentage) / 100;
+                }   
+            }
+        }
         return totalCost;
     }
 
@@ -266,21 +486,30 @@ contract NodeLicense8 is ERC721EnumerableUpgradeable, AccessControlUpgradeable {
     function claimReferralReward() external {
         require(claimable, "Claiming of referral rewards is currently disabled");
         uint256 reward = _referralRewards[msg.sender];
-        require(reward > 0, "No referral reward to claim");
-        _referralRewards[msg.sender] = 0;
+        // Pay Xai & esXAI rewards if they exist
+        uint256 rewardXai = _referralRewardsXai[msg.sender];
+        uint256 rewardEsXai = _referralRewardsEsXai[msg.sender];
+
+        // Require that the user has a reward to claim
+        require(reward > 0 || rewardXai > 0 || rewardEsXai > 0, "No referral reward to claim");
+
         (bool success, ) = msg.sender.call{value: reward}("");
         require(success, "Transfer failed.");
-        emit RewardClaimed(msg.sender, reward);
-    }
 
-    /**
-     * @notice Allows the admin to withdraw all funds from the contract.
-     * @dev Only callable by the admin.
-     */
-    function withdrawFunds() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        uint256 amount = address(this).balance;
-        fundsReceiver.transfer(amount);
-        emit FundsWithdrawn(msg.sender, amount);
+        // Reset the referral reward balance
+        _referralRewards[msg.sender] = 0;
+
+        if(rewardXai > 0){
+            IERC20 token = IERC20(xaiAddress);
+            token.transfer(msg.sender, rewardXai);
+            _referralRewardsXai[msg.sender] = 0;
+        }
+        if(rewardEsXai > 0){
+            IERC20 token = IERC20(esXaiAddress);
+            token.transfer(msg.sender, rewardEsXai);
+            _referralRewardsEsXai[msg.sender] = 0;
+        }
+        emit RewardClaimed(msg.sender, reward, rewardXai, rewardEsXai); 
     }
 
     /**
@@ -344,6 +573,25 @@ contract NodeLicense8 is ERC721EnumerableUpgradeable, AccessControlUpgradeable {
         maxSupply += _quantity;
         emit PricingTierSetOrAdded(_index, _price, _quantity);
     }
+
+    /**
+     * @notice loops the pricing tiers and increases supply while reducing the price of 
+     * of each tier by the multiplier provided.
+     * @dev This function is used to reduce the pricing tiers and increase the supply of the NodeLicense tokens.
+     * @dev This function is only called once.
+     * @param keyMultiplier The multiplier to reduce the price of each tier by.
+     */
+
+    function updatePricingAndQuantity(uint256 keyMultiplier) internal {
+        require(keyMultiplier >= 1, "Multiplier must be greater than 1");
+        require(maxSupply == 50000, "Pricing tiers have already been reduced");
+        for (uint256 i = 0; i < pricingTiers.length; i++) {
+            pricingTiers[i].price = pricingTiers[i].price / keyMultiplier;
+            pricingTiers[i].quantity = pricingTiers[i].quantity * keyMultiplier;
+        }
+        maxSupply = maxSupply * keyMultiplier;
+    }
+
 
     /**
      * @notice Returns the pricing tier at the given index.
@@ -418,22 +666,6 @@ contract NodeLicense8 is ERC721EnumerableUpgradeable, AccessControlUpgradeable {
     }
 
     /**
-     * @notice Allows the admin to refund a NodeLicense.
-     * @param _tokenId The ID of the token to refund.
-     * @dev Only callable by the admin.
-     */
-    function refundNodeLicense(uint256 _tokenId) external payable onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(_exists(_tokenId), "ERC721Metadata: Refund for nonexistent token");
-        uint256 refundAmount = _averageCost[_tokenId];
-        require(refundAmount > 0, "No funds to refund");
-        _averageCost[_tokenId] = 0;
-        (bool success, ) = payable(ownerOf(_tokenId)).call{value: refundAmount}("");
-        require(success, "Transfer failed.");
-        emit RefundOccurred(ownerOf(_tokenId), refundAmount);
-        _burn(_tokenId);
-    }
-
-    /**
      * @notice Returns the average cost of a NodeLicense token. This is primarily used for refunds.
      * @param _tokenId The ID of the token.
      * @return The average cost.
@@ -477,5 +709,70 @@ contract NodeLicense8 is ERC721EnumerableUpgradeable, AccessControlUpgradeable {
     ) internal override {
         revert("NodeLicense: transfer is not allowed");
     }
+
+    /** @notice takes in an amount of Ether in wei and returns the equivalent amount in XAI
+     * @param _amount The amount of Ether in wei (18 decimals)
+     * @return The equivalent amount in XAI with 18 decimals
+     */
+    function ethToXai(uint256 _amount) public view returns (uint256) {
+        int256 ethPrice = ethPriceFeed.latestAnswer(); // price returned in 8 decimals
+        int256 xaiPrice = xaiPriceFeed.latestAnswer(); // price returned in 8 decimals
+        
+        // Convert ethPrice and xaiPrice to uint256 with 18 decimals
+        uint256 ethPriceWith18Decimals = uint256(ethPrice) * 10**10;
+        uint256 xaiPriceWith18Decimals = uint256(xaiPrice) * 10**10;
+        
+        // Perform the calculation
+        uint256 amountInXai = (_amount * ethPriceWith18Decimals) / xaiPriceWith18Decimals;
+        
+        return amountInXai;
+    }
+
+    /**
+     * @notice Takes in a string and converts it to an address if valid, otherwise returns the zero address
+     * @param _address The string that is a potential address to validate and convert
+     * @return The address if valid, otherwise the zero address
+     */
+    function validateAndConvertAddress(string memory _address) public pure returns (address) {
+        bytes memory addrBytes = bytes(_address);
+
+        // Check if the length is 42 characters
+        if (addrBytes.length != 42) {
+            return address(0);
+        }
+
+        // Check if it starts with '0x'
+        if (addrBytes[0] != '0' || addrBytes[1] != 'x') {
+            return address(0);
+        }
+
+        uint160 addr = 0;
+
+        // Convert and validate each character
+        for (uint i = 2; i < 42; i++) {
+            uint8 b = uint8(addrBytes[i]);
+            if (b >= 48 && b <= 57) {
+                // '0' to '9'
+                addr = addr * 16 + (b - 48);
+            } else if (b >= 97 && b <= 102) {
+                // 'a' to 'f'
+                addr = addr * 16 + (b - 87);
+            } else if (b >= 65 && b <= 70) {
+                // 'A' to 'F'
+                addr = addr * 16 + (b - 55);
+            } else {
+                // Invalid character found
+                return address(0);
+            }
+        }
+
+        return address(addr);
+    }
+
+    function mint_DEV(uint256 _amount, address to) public {
+        // Mint the NodeLicense tokens
+        _mintNodeLicense(_amount, 0, to);
+    }
+
 }
 

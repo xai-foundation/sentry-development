@@ -138,7 +138,7 @@ contract Referee3 is Initializable, AccessControlEnumerableUpgradeable {
         stakeAmountBoostFactors[0] = 125;
         stakeAmountBoostFactors[1] = 150;
         stakeAmountBoostFactors[2] = 175;
-        stakeAmountBoostFactors[3] = 200;
+        stakeAmountBoostFactors[3] = 5000;
     }
 
     /**

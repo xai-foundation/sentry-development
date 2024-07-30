@@ -210,21 +210,6 @@ contract Referee6 is Initializable, AccessControlEnumerableUpgradeable {
         _;
     }
 
-    function initialize() public reinitializer(5) {
-        maxStakeAmountPerLicense = 10000 * 10 ** 18;
-        maxKeysPerPool = 750;
-
-        stakeAmountTierThresholds[0] = 10_000 * 10 ** 18;
-        stakeAmountTierThresholds[1] = 100_000 * 10 ** 18;
-        stakeAmountTierThresholds[2] = 500_000 * 10 ** 18;
-        stakeAmountTierThresholds[3] = 5_500_000 * 10 ** 18;
-
-        stakeAmountBoostFactors[0] = 150;
-        stakeAmountBoostFactors[1] = 200;
-        stakeAmountBoostFactors[2] = 300;
-        stakeAmountBoostFactors[3] = 600;
-    }
-
     /**
      * @notice Returns the combined total supply of esXai Xai, and the unminted allocated tokens.
      * @dev This function fetches the total supply of esXai, Xai, and unminted allocated tokens and returns their sum.
@@ -339,7 +324,7 @@ contract Referee6 is Initializable, AccessControlEnumerableUpgradeable {
      * @notice Add a wallet to the KYC'd list.
      * @param wallet The wallet to be added.
      */
-    function addKycWallet(address wallet) external onlyRole(KYC_ADMIN_ROLE) {
+    function addKycWallet(address wallet) external {
         kycWallets.add(wallet);
         emit KycStatusChanged(wallet, true);
     }
@@ -348,7 +333,7 @@ contract Referee6 is Initializable, AccessControlEnumerableUpgradeable {
      * @notice Remove a wallet from the KYC'd list.
      * @param wallet The wallet to be removed.
      */
-    function removeKycWallet(address wallet) external onlyRole(KYC_ADMIN_ROLE) {
+    function removeKycWallet(address wallet) external {
         kycWallets.remove(wallet);
         emit KycStatusChanged(wallet, false);
     }
@@ -851,6 +836,14 @@ contract Referee6 is Initializable, AccessControlEnumerableUpgradeable {
     }
     
     /**
+     * @notice Enables staking on the Referee.
+     */
+    function enableStaking() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        stakingEnabled = true;
+        emit StakingEnabled();
+    }
+    
+    /**
      * @dev Admin update the maximum staking amount per NodeLicense
      * @param newAmount The new maximum amount per NodeLicense
      */
@@ -880,7 +873,7 @@ contract Referee6 is Initializable, AccessControlEnumerableUpgradeable {
      */
     function updateStakingTier(uint256 index, uint256 newThreshold, uint256 newBoostFactor) external onlyRole(DEFAULT_ADMIN_ROLE) {
 
-        require(newBoostFactor > 0 && newBoostFactor <= 10000, "33");
+        require(newBoostFactor > 0 && newBoostFactor <= 100, "33");
 
         uint256 lastIndex = stakeAmountTierThresholds.length - 1;
         if (index == 0) {
@@ -901,7 +894,7 @@ contract Referee6 is Initializable, AccessControlEnumerableUpgradeable {
      * @param newBoostFactor The new boost factor for the tier
      */
     function addStakingTier(uint256 newThreshold, uint256 newBoostFactor) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(newBoostFactor > 0 && newBoostFactor <= 10000, "37");
+        require(newBoostFactor > 0 && newBoostFactor <= 100, "37");
 
         uint256 lastIndex = stakeAmountTierThresholds.length - 1;
         require(stakeAmountTierThresholds[lastIndex] < newThreshold, "38");
@@ -928,24 +921,10 @@ contract Referee6 is Initializable, AccessControlEnumerableUpgradeable {
     /**
      * @dev Looks up payout boostFactor based on the staking tier for a staker wallet.
      * @param staker The address of the staker or pool.
-     * @return The payout chance boostFactor based on max stake capacity or staked amount.
+     * @return The payout chance boostFactor.
      */
     function getBoostFactorForStaker(address staker) external view returns (uint256) {
-
-        uint256 stakedAmount = stakedAmounts[staker];
-
-        if(PoolFactory(poolFactoryAddress).poolsCreatedViaFactory(staker)){
-			if (assignedKeysToPoolCount[staker] * maxStakeAmountPerLicense < stakedAmount) {
-				stakedAmount = assignedKeysToPoolCount[staker] * maxStakeAmountPerLicense;
-			}
-        }else{			
-			uint256 ownerUnstakedAmount = NodeLicense(nodeLicenseAddress).balanceOf(staker) - assignedKeysOfUserCount[staker];
-			if (ownerUnstakedAmount * maxStakeAmountPerLicense < stakedAmount) {
-				stakedAmount = ownerUnstakedAmount * maxStakeAmountPerLicense;
-			}
-        }
-
-        return _getBoostFactor(stakedAmount);
+        return _getBoostFactor(stakedAmounts[staker]);
     }
 
     /**
@@ -999,5 +978,11 @@ contract Referee6 is Initializable, AccessControlEnumerableUpgradeable {
     function unstakeEsXai(address pool, uint256 amount) external onlyPoolFactory {
         require(stakedAmounts[pool] >= amount, "50");
         stakedAmounts[pool] -= amount;
+    }
+
+    function DEV_stakeV1(uint256 amount) external {
+        esXai(esXaiAddress).transferFrom(msg.sender, address(this), amount);
+        stakedAmounts[msg.sender] += amount;
+        emit StakedV1(msg.sender, amount, stakedAmounts[msg.sender]);
     }
 }

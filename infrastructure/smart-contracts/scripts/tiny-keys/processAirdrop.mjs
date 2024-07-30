@@ -1,18 +1,19 @@
-import {config, TinyKeysAirdropAbi, NodeLicenseAbi} from "@sentry/core";
+import { config, TinyKeysAirdropAbi, NodeLicenseAbi } from "@sentry/core";
 
-const TINY_KEYS_AIRDROP_ADDRESS = config.tinyKeysAirdropAddress; // Needs to be set after tiny key airdrop contract deployment
+const TINY_KEYS_AIRDROP_ADDRESS = "0xA65E7524b4714d1BB3208aEd9e9fC666806148a5" // Needs to be set after tiny key airdrop contract deployment
+const NODE_LICENSE_CONTRACT = "0x07C05C6459B0F86A6aBB3DB71C259595d22af3C2";
 
 async function main() {
 
     // get the deployer
     const [deployer] = (await ethers.getSigners());
 
-    const qtyPerSegment = 2;
+    const qtyPerSegment = 10;
 
     // Get the total supply of node licenses
 
     const TinyKeysAirdrop = await new ethers.Contract(TINY_KEYS_AIRDROP_ADDRESS, TinyKeysAirdropAbi, deployer);
-    
+
     const totalSupplyAtStart = await TinyKeysAirdrop.totalSupplyAtStart();
     const currentIndex = Number(await TinyKeysAirdrop.airdropCounter());
     let nextIndex = currentIndex;
@@ -22,8 +23,19 @@ async function main() {
         try {
             await TinyKeysAirdrop.processAirdropSegmentOnlyMint(qtyPerSegment);
             //TODO we should be running this from multiple wallets so we don't get errors for tx nonce or tx queue then remove that timeout
-            await new Promise((resolve)=> setTimeout(resolve, 100));
-            await TinyKeysAirdrop.processAirdropSegmentOnlyStake([nextIndex, nextIndex + 1]);
+            console.log("Processed mint, starting stake")
+            await TinyKeysAirdrop.processAirdropSegmentOnlyStake([
+                nextIndex,
+                nextIndex + 1,
+                nextIndex + 2,
+                nextIndex + 3,
+                nextIndex + 4,
+                nextIndex + 5,
+                nextIndex + 6,
+                nextIndex + 7,
+                nextIndex + 8,
+                nextIndex + 9,
+            ]);
             nextIndex += qtyPerSegment
         } catch (error) {
             console.error("Tiny Keys Airdrop error", error);
@@ -38,5 +50,4 @@ async function main() {
 main().catch((error) => {
     console.error(error);
     process.exitCode = 1;
-  });
-  
+});

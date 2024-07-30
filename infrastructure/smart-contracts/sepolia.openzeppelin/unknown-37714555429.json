@@ -1,0 +1,85 @@
+{
+  "manifestVersion": "3.2",
+  "admin": {
+    "address": "0x83681f1a42ADFeee6cBAB449469cDc5634Ff3b37",
+    "txHash": "0x429da25c3794fe7e900786ba2438739917806224431c449109510b20a8120178"
+  },
+  "proxies": [
+    {
+      "address": "0x31635b37347258d7c6f83bDC664c5516Da8e6fD7",
+      "txHash": "0x91e3e2bda05e392409506f52d6b1b8ae7306cdf0d1ff9a79e1d215548c1cfb2a",
+      "kind": "transparent"
+    }
+  ],
+  "impls": {
+    "c83ca087e9a1fb382ccfc2f80050ca2007f07021cc195fa0339f593fcd321600": {
+      "address": "0x486D6B13850aF7434ec41C87f5bC5AE7b9588Faf",
+      "txHash": "0xd28cee3a4d3efd1a73b1b8d62b823460c66756813c1fbadcf8646c562c34c234",
+      "layout": {
+        "solcVersion": "0.8.24",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:68"
+          },
+          {
+            "label": "DOMAIN_SEPARATOR",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_bytes32",
+            "contract": "Forwarder",
+            "src": "contracts\\xai-subsidy\\Forwarder.sol:9"
+          },
+          {
+            "label": "nonces",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "Forwarder",
+            "src": "contracts\\xai-subsidy\\Forwarder.sol:16"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    }
+  }
+}

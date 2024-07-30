@@ -3,8 +3,9 @@ const { ethers, upgrades } = hardhat;
 import { safeVerify } from "../utils/safeVerify.mjs";
 import { esXaiAbi } from "@sentry/core";
 
+
 const config = {
-    refereeAddress: "0xF84D76755a68bE9DFdab9a0b6d934896Ceab957b", //TODO !!!!!
+    refereeAddress: "0xFaBd7d8D3540254E94811FB33A94537c04D3fEB7",
     esXaiAddress: "0x5776784C2012887D1f2FA17281E406643CBa5330",
     gasSubsidyAddress: "0x91401a742b40802673b85AaEFeE0c999942Dc17c",
     xaiAddress: "0x724E98F16aC707130664bb00F4397406F74732D0",
@@ -22,6 +23,11 @@ async function main() {
     await StakingPool.waitForDeployment();
     const poolImplAddress = await StakingPool.getAddress();
     console.log("Deployed Impl", poolImplAddress)
+    
+    await run("verify:verify", {
+        address: poolImplAddress,
+        constructorArguments: [],
+    });
 
     // // //DEPLOY BUCKET TRACKER KEY IMPL
     console.log("Deploying BucketTracker implementation...");
@@ -29,6 +35,11 @@ async function main() {
     await KeyBucketTracker.waitForDeployment();
     const keyBucketImplAddress = await KeyBucketTracker.getAddress();
     console.log("Deployed Impl", keyBucketImplAddress)
+    
+    await run("verify:verify", {
+        address: keyBucketImplAddress,
+        constructorArguments: [],
+    });
 
     // // //DEPLOY BUCKET TRACKER ESXAI IMPL
     console.log("Deploying BucketTracker implementation...");
@@ -37,6 +48,11 @@ async function main() {
     const esXaiBucketImplAddress = await EsXaiBucketTracker.getAddress();
     console.log("Deployed Impl", esXaiBucketImplAddress)
 
+    await run("verify:verify", {
+        address: esXaiBucketImplAddress,
+        constructorArguments: [],
+    });
+
     //TODO DEPLOY BEACON
     console.log("Deploying PoolBeacon");
     const PoolBeacon = await ethers.deployContract("PoolBeacon", [poolImplAddress]);
@@ -44,11 +60,21 @@ async function main() {
     const poolBeaconAddress = await PoolBeacon.getAddress();
     console.log("Deployed PoolBeacon", poolBeaconAddress);
 
+    await run("verify:verify", {
+        address: poolBeaconAddress,
+        constructorArguments: [poolImplAddress],
+    });
+
     console.log("Deploying BeaconProxy for PoolBeacon for auto verification");
     const PoolBeaconProxy = await ethers.deployContract("BeaconProxy", [poolBeaconAddress, "0x"]);
     await PoolBeaconProxy.waitForDeployment();
     const poolBeaconProxyAddress = await PoolBeaconProxy.getAddress();
     console.log("Deployed BeaconProxy for PoolBeacon", poolBeaconProxyAddress);
+
+    await run("verify:verify", {
+        address: poolBeaconProxyAddress,
+        constructorArguments: [poolBeaconAddress, "0x"],
+    });
 
     console.log("Deploying EsXaiBucketBeacon");
     const EsXaiBucketBeacon = await ethers.deployContract("PoolBeacon", [esXaiBucketImplAddress]);
@@ -56,11 +82,21 @@ async function main() {
     const esXaiBucketBeaconAddress = await EsXaiBucketBeacon.getAddress();
     console.log("Deployed EsXaiBucketBeacon", esXaiBucketBeaconAddress);
 
+    await run("verify:verify", {
+        address: esXaiBucketBeaconAddress,
+        constructorArguments: [esXaiBucketImplAddress],
+    });
+
     console.log("Deploying BeaconProxy for EsXaiBucketBeaconProxy for auto verification");
     const EsXaiBucketBeaconProxy = await ethers.deployContract("BeaconProxy", [esXaiBucketBeaconAddress, "0x"]);
     await EsXaiBucketBeaconProxy.waitForDeployment();
     const esXaiBucketBeaconProxyAddress = await EsXaiBucketBeaconProxy.getAddress();
     console.log("Deployed BeaconProxy for EsXaiBucketBeaconProxy", esXaiBucketBeaconProxyAddress);
+
+    await run("verify:verify", {
+        address: esXaiBucketBeaconProxyAddress,
+        constructorArguments: [esXaiBucketBeaconAddress, "0x"],
+    });
 
     console.log("Deploying KeyBucketBeacon");
     const KeyBucketBeacon = await ethers.deployContract("PoolBeacon", [keyBucketImplAddress]);
@@ -68,11 +104,22 @@ async function main() {
     const keyBucketBeaconAddress = await KeyBucketBeacon.getAddress();
     console.log("Deployed KeyBucketBeacon", keyBucketBeaconAddress);
 
+    await run("verify:verify", {
+        address: keyBucketBeaconAddress,
+        constructorArguments: [keyBucketImplAddress],
+    });
+
+
     console.log("Deploying BeaconProxy for KeyBucketBeaconProxy for auto verification");
     const KeyBucketBeaconProxy = await ethers.deployContract("BeaconProxy", [keyBucketBeaconAddress, "0x"]);
     await KeyBucketBeaconProxy.waitForDeployment();
     const keyBucketBeaconProxyAddress = await KeyBucketBeaconProxy.getAddress();
     console.log("Deployed BeaconProxy for KeyBucketBeaconProxy", keyBucketBeaconProxyAddress);
+
+    await run("verify:verify", {
+        address: keyBucketBeaconProxyAddress,
+        constructorArguments: [keyBucketBeaconAddress, "0x"],
+    });
 
 
     console.log("Deploying PoolFactory Upgradable...");
@@ -88,7 +135,14 @@ async function main() {
     await tx.wait(3);
     const poolFactoryAddress = await poolFactory.getAddress();
     console.log("PoolFactory deployed to:", poolFactoryAddress);
+    
+    await run("verify:verify", {
+        address: poolFactoryAddress,
+        constructorArguments: [],
+        contract: "contracts/staking-v2/PoolFactory.sol:PoolFactory"
+    });
 
+    
     console.log("Deploying PoolProxyDeployer Upgradable...");
     const PoolProxyDeployer = await ethers.getContractFactory("contracts/staking-v2/PoolProxyDeployer.sol:PoolProxyDeployer");
 
@@ -102,17 +156,28 @@ async function main() {
     await tx2.wait(3);
     const poolProxyDeployerAddress = await poolProxyDeployer.getAddress();
     console.log("PoolProxyDeployer deployed to:", poolProxyDeployerAddress);
-
+    
+    await run("verify:verify", {
+        address: poolProxyDeployerAddress,
+        constructorArguments: [],
+        contract: "contracts/staking-v2/PoolProxyDeployer.sol:PoolProxyDeployer"
+    });
 
     console.log("Update PoolFactory updatePoolProxyDeployer...");
     await poolFactory.updatePoolProxyDeployer(poolProxyDeployerAddress);
     console.log("Updated PoolFactory added poolProxyDeployerAddress", poolProxyDeployerAddress);
 
-    // Upgrade the referee
-    const referee = await ethers.getContractFactory("contracts/upgrades/referee/Referee5.sol:Referee5");
-    console.log("Got factory");
-    await upgrades.upgradeProxy(config.refereeAddress, referee, { call: { fn: "initialize", args: [poolFactoryAddress] } });
-    console.log("Upgraded Referee5");
+    // // Upgrade the referee
+    // const referee = await ethers.getContractFactory("Referee5");
+    // console.log("Got factory");
+    // await upgrades.upgradeProxy(config.refereeAddress, referee, { call: { fn: "initialize", args: [poolFactoryAddress] } });
+    // console.log("Upgraded");
+
+    // await run("verify:verify", {
+    //     address: config.refereeAddress,
+    //     constructorArguments: [],
+    //     contract: "Referee5"
+    // });
 
     // Give PoolFactory auth to whitelist new pools & buckets on esXai
     console.log("Adding esXai DEFAULT_ADMIN_ROLE to PoolFactory...");
@@ -125,92 +190,7 @@ async function main() {
     console.log("Added PoolFactory to esXai whitelist");
 
 
-    const deployedContracts = {
-        poolImplAddress,
-        keyBucketImplAddress,
-        esXaiBucketImplAddress,
-        poolBeaconAddress,
-        poolBeaconProxyAddress,
-        esXaiBucketBeaconAddress,
-        esXaiBucketBeaconProxyAddress,
-        keyBucketBeaconAddress,
-        keyBucketBeaconProxyAddress,
-        poolFactoryAddress,
-        poolProxyDeployerAddress,
-        refereeAddress: config.refereeAddress
-    }
-
-    console.log("Deployed contracts: ");
-    console.log(deployedContracts);
-
-    console.log("Starting verification... ");
-
-    await run("verify:verify", {
-        address: poolImplAddress,
-        constructorArguments: [],
-    });
-
-    await run("verify:verify", {
-        address: keyBucketImplAddress,
-        constructorArguments: [],
-    });
-
-    await run("verify:verify", {
-        address: esXaiBucketImplAddress,
-        constructorArguments: [],
-    });
-
-    await run("verify:verify", {
-        address: poolBeaconAddress,
-        constructorArguments: [poolImplAddress],
-    });
-
-    await run("verify:verify", {
-        address: poolBeaconProxyAddress,
-        constructorArguments: [poolBeaconAddress, "0x"],
-    });
-
-    await run("verify:verify", {
-        address: esXaiBucketBeaconAddress,
-        constructorArguments: [esXaiBucketImplAddress],
-    });
-
-    await run("verify:verify", {
-        address: esXaiBucketBeaconProxyAddress,
-        constructorArguments: [esXaiBucketBeaconAddress, "0x"],
-    });
-
-    await run("verify:verify", {
-        address: keyBucketBeaconAddress,
-        constructorArguments: [keyBucketImplAddress],
-    });
-
-    await run("verify:verify", {
-        address: keyBucketBeaconProxyAddress,
-        constructorArguments: [keyBucketBeaconAddress, "0x"],
-    });
-
-    await run("verify:verify", {
-        address: poolFactoryAddress,
-        constructorArguments: [],
-        contract: "contracts/staking-v2/PoolFactory.sol:PoolFactory"
-    });
-
-    await run("verify:verify", {
-        address: poolProxyDeployerAddress,
-        constructorArguments: [],
-        contract: "contracts/staking-v2/PoolProxyDeployer.sol:PoolProxyDeployer"
-    });
-
-    await run("verify:verify", {
-        address: config.refereeAddress,
-        constructorArguments: [],
-        contract: "contracts/upgrades/referee/Referee5.sol:Referee5"
-    });
-
-    console.log("Deployed Staking V2 setup");
-    console.log("Deployed contracts: ");
-    console.log(deployedContracts);
+    console.log("Deployed Staking V2 setup")
 }
 
 // We recommend this pattern to be able to use async/await everywhere
