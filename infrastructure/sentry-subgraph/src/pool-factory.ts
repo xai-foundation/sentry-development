@@ -48,12 +48,25 @@ export function handleInitialized(event: Initialized): void {
 
   const poolFactory = PoolFactory.bind(event.address)
   poolConfig.version = BigInt.fromI32(event.params.version)
-  poolConfig.unstakeKeysDelayPeriod = poolFactory.unstakeKeysDelayPeriod()
-  poolConfig.unstakeGenesisKeyDelayPeriod = poolFactory.unstakeGenesisKeyDelayPeriod()
-  poolConfig.unstakeEsXaiDelayPeriod = poolFactory.unstakeEsXaiDelayPeriod()
-  poolConfig.updateRewardBreakdownDelayPeriod = poolFactory.updateRewardBreakdownDelayPeriod()
+  if (event.params.version == 1) {
+    poolConfig.unstakeKeysDelayPeriod = BigInt.fromI32(60)
+    poolConfig.unstakeGenesisKeyDelayPeriod = BigInt.fromI32(180)
+    poolConfig.unstakeEsXaiDelayPeriod = BigInt.fromI32(60)
+    poolConfig.updateRewardBreakdownDelayPeriod = BigInt.fromI32(120)
+  } else if (event.params.version == 2) {
+    poolConfig.unstakeKeysDelayPeriod = poolFactory.unstakeKeysDelayPeriod()
+    poolConfig.unstakeGenesisKeyDelayPeriod = poolFactory.unstakeGenesisKeyDelayPeriod()
+    poolConfig.unstakeEsXaiDelayPeriod = poolFactory.unstakeEsXaiDelayPeriod()
+    poolConfig.updateRewardBreakdownDelayPeriod = BigInt.fromI32(270)
+  } else {
+    poolConfig.unstakeKeysDelayPeriod = poolFactory.unstakeKeysDelayPeriod()
+    poolConfig.unstakeGenesisKeyDelayPeriod = poolFactory.unstakeGenesisKeyDelayPeriod()
+    poolConfig.unstakeEsXaiDelayPeriod = poolFactory.unstakeEsXaiDelayPeriod()
+    poolConfig.updateRewardBreakdownDelayPeriod = poolFactory.updateRewardBreakdownDelayPeriod()
+  }
   poolConfig.save();
 }
+
 
 export function handleStakeKeys(event: StakeKeys): void {
 
@@ -88,17 +101,27 @@ export function handleStakeKeys(event: StakeKeys): void {
 
   //Check if this is triggered from the tiny keys aidrop admin stake 
   // processAirdropSegmentOnlyStake (0xd65f202a)
-  if (signature == "0xd65f202a") {
+  // sepolia start processAirdropSegmentOnlyStake(uint256 keyId) (0x3ada44c1)
+  if (signature == "0xd65f202a" || signature == "0x3ada44c1") {
 
     const dataToDecode = getInputFromEvent(event, true)
-    const decoded = ethereum.decode('(uint256[])', dataToDecode)
+    let decoded: ethereum.Value | null;
     let autoStakeKeyIds: BigInt[];
 
-    if (decoded) {
-      autoStakeKeyIds = decoded.toTuple()[0].toBigIntArray();
+    if (signature == "0x3ada44c1") {
+      decoded = ethereum.decode('(uint256)', dataToDecode)
+      if (!decoded) {
+        log.warning("Failed to decode handleStakeKeys, processAirdropSegmentOnlyStake TX: " + event.transaction.hash.toHexString(), [])
+        return;
+      }
+      autoStakeKeyIds = [decoded.toTuple()[0].toBigInt()];
     } else {
-      log.warning("Failed to decode handleStakeKeys, processAirdropSegmentOnlyStake TX: " + event.transaction.hash.toHexString(), [])
-      return;
+      decoded = ethereum.decode('(uint256[])', dataToDecode)
+      if (!decoded) {
+        log.warning("Failed to decode handleStakeKeys, processAirdropSegmentOnlyStake TX: " + event.transaction.hash.toHexString(), [])
+        return;
+      }
+      autoStakeKeyIds = decoded.toTuple()[0].toBigIntArray();
     }
 
     const airdropContract = TinyKeysAirdrop.bind(event.transaction.to!)
@@ -169,6 +192,7 @@ export function handleStakeKeys(event: StakeKeys): void {
   }
 
 }
+
 
 export function handleUnstakeKeys(event: UnstakeKeys): void {
 

@@ -83,6 +83,11 @@ export function handleInitialized(event: Initialized): void {
 
 
 export function handleAssertionSubmitted(event: AssertionSubmittedEvent): void {
+
+  if (event.block.number.lt(BigInt.fromI32(32124545))) {
+    return;
+  }
+
   // Load current referee config from the graph
   const refereeConfig = RefereeConfig.load("RefereeConfig");
 
@@ -91,7 +96,7 @@ export function handleAssertionSubmitted(event: AssertionSubmittedEvent): void {
     log.warning("Failed to find refereeConfig handleAssertionSubmitted TX: " + event.transaction.hash.toHexString(), [])
     return;
   }
-  if (refereeConfig.version.gt(BigInt.fromI32(6))) {
+  if (refereeConfig.version.gt(BigInt.fromI32(9))) {
     // Event replaced in newer versions of the Referee for simpler event handlers
     return;
   }
@@ -239,6 +244,9 @@ export function handleChallengeExpired(event: ChallengeExpiredEvent): void {
 }
 
 export function handleChallengeSubmitted(event: ChallengeSubmittedEvent): void {
+  if (event.block.number.gt(BigInt.fromI32(54276146)) && event.block.number.lt(BigInt.fromI32(54330951))) {
+    return;
+  }
   // create an entity for the challenge
   let challenge = new Challenge(event.params.challengeNumber.toString())
 
@@ -263,7 +271,7 @@ export function handleRewardsClaimed(event: RewardsClaimedEvent): void {
     log.warning("Failed to find refereeConfig handleRewardsClaimed TX: " + event.transaction.hash.toHexString(), [])
     return;
   }
-  if (refereeConfig.version.gt(BigInt.fromI32(6))) {
+  if (refereeConfig.version.gt(BigInt.fromI32(9))) {
     // Event replaced in newer versions of the Referee for simpler event handlers
     return;
   }
@@ -375,7 +383,7 @@ export function handleBatchRewardsClaimed(event: BatchRewardsClaimedEvent): void
     log.warning("Failed to find refereeConfig handleBatchRewardsClaimed TX: " + event.transaction.hash.toHexString(), [])
     return;
   }
-  if (refereeConfig.version.gt(BigInt.fromI32(6))) {
+  if (refereeConfig.version.gt(BigInt.fromI32(9))) {
     // Event replaced in newer versions of the Referee for simpler event handlers
     return;
   }
