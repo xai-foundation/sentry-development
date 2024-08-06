@@ -5,9 +5,9 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "../upgrades/referee/Referee9.sol";
-import "../upgrades/node-license/NodeLicense8.sol";
-import "../upgrades/pool-factory/PoolFactory2.sol";
+import "../upgrades/referee/Referee16.sol";
+import "../upgrades/node-license/NodeLicense10.sol";
+import "../upgrades/pool-factory/PoolFactory10.sol";
 
 contract TinyKeysAirdrop is Initializable, AccessControlUpgradeable {
     using Math for uint256;
@@ -85,10 +85,10 @@ contract TinyKeysAirdrop is Initializable, AccessControlUpgradeable {
         // The node license contract will then notify the referee contract
         // This will disable minting in the node license contract
         // This will also disable staking in the referee contract
-        NodeLicense8(nodeLicenseAddress).startAirdrop(refereeAddress);
+        NodeLicense10(nodeLicenseAddress).startAirdrop(refereeAddress);
 
         // Set the total supply of node licenses at the start of the airdrop
-        totalSupplyAtStart = NodeLicense8(nodeLicenseAddress).totalSupply();
+        totalSupplyAtStart = NodeLicense10(nodeLicenseAddress).totalSupply();
         
         airdropStarted = true;
         emit AirdropStarted(totalSupplyAtStart, keyMultiplier);
@@ -103,7 +103,7 @@ contract TinyKeysAirdrop is Initializable, AccessControlUpgradeable {
         // Ensure we don't go over the total supply
         uint256 endingKeyId = Math.min(airdropCounter + _qtyToProcess, totalSupplyAtStart);     
         // Connect to the referee and node license contracts
-        NodeLicense8 nodeLicense = NodeLicense8(nodeLicenseAddress);
+        NodeLicense10 nodeLicense = NodeLicense10(nodeLicenseAddress);
         // Loop through the range of node licenses
         // Needs to be <= to include the last key
         for (uint256 i = startingKeyId; i <= endingKeyId; i++) {
@@ -115,11 +115,11 @@ contract TinyKeysAirdrop is Initializable, AccessControlUpgradeable {
             // uint256 start = nodeLicense.totalSupply() + 1;
 
             // Mint the airdropped keys for the owner
-            uint256 start = nodeLicense.mintForAirdrop(keyMultiplier, i);
+            nodeLicense.mintForAirdrop(keyMultiplier, nodeLicense.ownerOf(i));
 
-            uint256 end = (start + keyMultiplier) - 1;
+            // uint256 end = (start + keyMultiplier) - 1;
 
-            keyToStartEnd[i] = [start, end];
+            // keyToStartEnd[i] = [start, end];
         }
 
         // Update the airdrop counter
@@ -139,8 +139,8 @@ contract TinyKeysAirdrop is Initializable, AccessControlUpgradeable {
 
             require(endKeyId > startKeyId, "Invalid input");
 
-            Referee9 referee = Referee9(refereeAddress);
-            address owner = NodeLicense8(nodeLicenseAddress).ownerOf(keyId);
+            Referee16 referee = Referee16(refereeAddress);
+            address owner = NodeLicense10(nodeLicenseAddress).ownerOf(keyId);
 
             address poolAddress = referee.assignedKeyToPool(keyId);
 
@@ -156,7 +156,7 @@ contract TinyKeysAirdrop is Initializable, AccessControlUpgradeable {
                 stakeKeyIds[i] = startKeyId + i;
             }
 
-            PoolFactory2(poolFactoryAddress).stakeKeysAdmin(poolAddress, stakeKeyIds, owner);
+            PoolFactory10(poolFactoryAddress).stakeKeysAdmin(poolAddress, stakeKeyIds, owner);
         }
     }
 
@@ -166,7 +166,7 @@ contract TinyKeysAirdrop is Initializable, AccessControlUpgradeable {
         require(airdropCounter == totalSupplyAtStart, "Airdrop not complete");
 
         // Notify the node license contract that the airdrop is complete
-        NodeLicense8(nodeLicenseAddress).finishAirdrop(refereeAddress, keyMultiplier + 1);
+        NodeLicense10(nodeLicenseAddress).finishAirdrop(refereeAddress, keyMultiplier + 1);
 
         airdropStarted = false;
         airdropEnded = true;

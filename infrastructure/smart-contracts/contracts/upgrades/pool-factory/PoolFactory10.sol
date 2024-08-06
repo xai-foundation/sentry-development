@@ -5,12 +5,11 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
+import "../../staking-v2/BucketTracker.sol";
 import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import "../../upgrades/referee/Referee16.sol";
 import "../../Xai.sol";
-import "../../upgrades/esXai/esXai2.sol";
-import "../../upgrades/node-license/NodeLicense8.sol";
+import "../../upgrades/node-license/NodeLicense10.sol";
 import "../../staking-v2/StakingPool5.sol";
 import "../../staking-v2/PoolProxyDeployer.sol";
 import "../../staking-v2/PoolBeacon.sol";
@@ -747,7 +746,7 @@ contract PoolFactory10 is Initializable, AccessControlEnumerableUpgradeable {
         uint16 offset,
         uint16 pageLimit
     ) external view returns (uint256[] memory unstakedKeyIds) {
-        uint256 userKeyBalance = NodeLicense(nodeLicenseAddress).balanceOf(
+        uint256 userKeyBalance = NodeLicense10(nodeLicenseAddress).balanceOf(
             user
         );
         unstakedKeyIds = new uint256[](pageLimit);
@@ -755,7 +754,7 @@ contract PoolFactory10 is Initializable, AccessControlEnumerableUpgradeable {
         uint256 limit = offset + pageLimit;
 
         for (uint256 i = offset; i < userKeyBalance && i < limit; i++) {
-            uint256 keyId = NodeLicense(nodeLicenseAddress).tokenOfOwnerByIndex(
+            uint256 keyId = NodeLicense10(nodeLicenseAddress).tokenOfOwnerByIndex(
                 user,
                 i
             );

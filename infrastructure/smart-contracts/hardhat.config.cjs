@@ -8,19 +8,38 @@ dotenv.config();
 const config = {
   defaultNetwork: "arbitrumSepolia",
   solidity: {
-    version: "0.8.19",
-    settings: {
-      viaIR: true,
-      optimizer: {
-        enabled: true,
-        runs: 100,
-        details: {
-          yulDetails: {
-            optimizerSteps: "u",
-          },
-        },
+    compilers: [
+      {
+        version: "0.8.9",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+            details: {
+              yul: true
+            }
+          }
+        }
       },
-    },
+      {
+        version: "0.8.22",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
+      },
+      {
+        version: "0.4.18",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
+      }
+    ]
   },
   networks: {
     hardhat: {

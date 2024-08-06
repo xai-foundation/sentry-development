@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 import "../../Xai.sol";
 import "../../upgrades/referee/Referee16.sol";
-import "../../upgrades/node-license/NodeLicense8.sol";
+import "../../upgrades/node-license/NodeLicense10.sol";
 
 /**
  * @title esXai
@@ -214,7 +214,7 @@ contract esXai6 is ERC20Upgradeable, ERC20BurnableUpgradeable, AccessControlUpgr
         require(block.timestamp >= request.startTime + request.duration, "Redemption period not yet over");
 
         // Retrieve the number of licenses owned from the nodeLicense contract
-        uint256 licenseCountOwned = NodeLicense8(nodeLicenseAddress).balanceOf(msg.sender);
+        uint256 licenseCountOwned = NodeLicense10(nodeLicenseAddress).balanceOf(msg.sender);
 
         // If the wallet owns more licenses than the maxKeysNonKyc, check if the wallet is KYC approved
         if(licenseCountOwned > maxKeysNonKyc){
