@@ -1,9 +1,11 @@
 export let config = {
   "arbitrumBlockExplorer": "https://arbiscan.io",
   "arbitrumGoerliBlockExplorer": "https://goerli.arbiscan.io",
-  "arbitrumOneJsonRpcUrl": process.env.ARB_ONE_RPC || "https://arb-mainnet.g.alchemy.com/v2/p_LSgTIj_JtEt3JPM7IZIZFL1a70yvQJ",
-  "arbitrumOneWebSocketUrl": process.env.ARB_ONE_WEBSOCKET ||"wss://arb-mainnet.g.alchemy.com/v2/p_LSgTIj_JtEt3JPM7IZIZFL1a70yvQJ",
+  "arbitrumOneJsonRpcUrl": (typeof process !== 'undefined' && process.env && process.env.ARB_ONE_RPC) || "https://arb-mainnet.g.alchemy.com/v2/p_LSgTIj_JtEt3JPM7IZIZFL1a70yvQJ",
+  "arbitrumOneWebSocketUrl": (typeof process !== 'undefined' && process.env && process.env.ARB_ONE_WEBSOCKET) || "wss://arb-mainnet.g.alchemy.com/v2/p_LSgTIj_JtEt3JPM7IZIZFL1a70yvQJ",
   "defaultRpcUrl": "https://arb-mainnet.g.alchemy.com/v2/p_LSgTIj_JtEt3JPM7IZIZFL1a70yvQJ",
+  "chainlinkEthUsdPriceFeed": "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612",
+  "chainlinkXaiUsdPriceFeed": "0x806c532D543352e7C344ba6C7F3F00Bfbd309Af1",
   "esXaiAddress": "0x4C749d097832DE2FEcc989ce18fDc5f1BD76700c",
   "esXaiDeployedBlockNumber": 157193630,
   "esXaiImplementationAddress": "0x8d6c063656b00e5c37ce007c0f99848d58f19d6b",

@@ -45,6 +45,13 @@ dataSources:
           handler: handleStakedV1
         - event: UnstakeV1(indexed address,uint256,uint256)
           handler: handleUnstakeV1
+        - event: NewBulkSubmission(indexed uint256,indexed address,uint256,uint256)
+          handler: handleNewBulkSubmission
+        - event: UpdateBulkSubmission(indexed uint256,indexed address,uint256,uint256,uint256,uint256)
+          handler: handleUpdateBulkSubmission
+        - event: BulkRewardsClaimed(indexed uint256,indexed address,uint256,uint256)
+          handler: handleBulkRewardsClaimed
+
       file: ./src/referee.ts
   - kind: ethereum
     name: NodeLicense
@@ -82,6 +89,8 @@ dataSources:
       abis:
         - name: PoolFactory
           file: ./abis/PoolFactory.json
+        - name: TinyKeysAirdrop
+          file: ./abis/TinyKeysAirdrop.json
       eventHandlers:
         - event: Initialized(uint8)
           handler: handleInitialized
@@ -128,3 +137,23 @@ dataSources:
         - event: ConvertedToEsXai(indexed address,uint256)
           handler: handleConvertedToEsXai
       file: ./src/xai.ts
+  - kind: ethereum
+    name: TinyKeysAirdrop
+    network: arbitrum-sepolia
+    source:
+      address: "0xA65E7524b4714d1BB3208aEd9e9fC666806148a5"
+      abi: TinyKeysAirdrop
+      startBlock: 62587483
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - AirdropSegmentCompleteEvent
+      abis:
+        - name: TinyKeysAirdrop
+          file: ./abis/TinyKeysAirdrop.json
+      eventHandlers:
+        - event: AirdropSegmentComplete(uint256,uint256)
+          handler: handleAirdropSegmentComplete
+      file: ./src/tiny-keys-airdrop.ts
