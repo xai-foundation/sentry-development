@@ -382,8 +382,8 @@ export class PoolInfo extends Entity {
     );
   }
 
-  get submissions(): PoolSubmissionLoader {
-    return new PoolSubmissionLoader(
+  get submissions(): BulkSubmissionLoader {
+    return new BulkSubmissionLoader(
       "PoolInfo",
       this.get("id")!.toString(),
       "submissions",
@@ -1112,6 +1112,14 @@ export class Challenge extends Entity {
       "submissions",
     );
   }
+
+  get bulkSubmissions(): BulkSubmissionLoader {
+    return new BulkSubmissionLoader(
+      "Challenge",
+      this.get("id")!.toString(),
+      "bulkSubmissions",
+    );
+  }
 }
 
 export class Submission extends Entity {
@@ -1483,6 +1491,14 @@ export class SentryWallet extends Entity {
       "poolStakes",
     );
   }
+
+  get bulkSubmissions(): BulkSubmissionLoader {
+    return new BulkSubmissionLoader(
+      "SentryWallet",
+      this.get("id")!.toString(),
+      "bulkSubmissions",
+    );
+  }
 }
 
 export class RefereeConfig extends Entity {
@@ -1592,7 +1608,7 @@ export class RefereeConfig extends Entity {
   }
 }
 
-export class PoolSubmission extends Entity {
+export class BulkSubmission extends Entity {
   constructor(id: string) {
     super();
     this.set("id", Value.fromString(id));
@@ -1600,24 +1616,24 @@ export class PoolSubmission extends Entity {
 
   save(): void {
     let id = this.get("id");
-    assert(id != null, "Cannot save PoolSubmission entity without an ID");
+    assert(id != null, "Cannot save BulkSubmission entity without an ID");
     if (id) {
       assert(
         id.kind == ValueKind.STRING,
-        `Entities of type PoolSubmission must have an ID of type String but the id '${id.displayData()}' is of type ${id.displayKind()}`,
+        `Entities of type BulkSubmission must have an ID of type String but the id '${id.displayData()}' is of type ${id.displayKind()}`,
       );
-      store.set("PoolSubmission", id.toString(), this);
+      store.set("BulkSubmission", id.toString(), this);
     }
   }
 
-  static loadInBlock(id: string): PoolSubmission | null {
-    return changetype<PoolSubmission | null>(
-      store.get_in_block("PoolSubmission", id),
+  static loadInBlock(id: string): BulkSubmission | null {
+    return changetype<BulkSubmission | null>(
+      store.get_in_block("BulkSubmission", id),
     );
   }
 
-  static load(id: string): PoolSubmission | null {
-    return changetype<PoolSubmission | null>(store.get("PoolSubmission", id));
+  static load(id: string): BulkSubmission | null {
+    return changetype<BulkSubmission | null>(store.get("BulkSubmission", id));
   }
 
   get id(): string {
@@ -1646,8 +1662,8 @@ export class PoolSubmission extends Entity {
     this.set("challengeId", Value.fromBigInt(value));
   }
 
-  get poolAddress(): Bytes {
-    let value = this.get("poolAddress");
+  get bulkAddress(): Bytes {
+    let value = this.get("bulkAddress");
     if (!value || value.kind == ValueKind.NULL) {
       throw new Error("Cannot return null for a required field.");
     } else {
@@ -1655,8 +1671,8 @@ export class PoolSubmission extends Entity {
     }
   }
 
-  set poolAddress(value: Bytes) {
-    this.set("poolAddress", Value.fromBytes(value));
+  set bulkAddress(value: Bytes) {
+    this.set("bulkAddress", Value.fromBytes(value));
   }
 
   get challenge(): string {
@@ -1672,21 +1688,25 @@ export class PoolSubmission extends Entity {
     this.set("challenge", Value.fromString(value));
   }
 
-  get poolInfo(): string {
+  get poolInfo(): string | null {
     let value = this.get("poolInfo");
     if (!value || value.kind == ValueKind.NULL) {
-      throw new Error("Cannot return null for a required field.");
+      return null;
     } else {
       return value.toString();
     }
   }
 
-  set poolInfo(value: string) {
-    this.set("poolInfo", Value.fromString(value));
+  set poolInfo(value: string | null) {
+    if (!value) {
+      this.unset("poolInfo");
+    } else {
+      this.set("poolInfo", Value.fromString(<string>value));
+    }
   }
 
-  get stakedKeyCount(): BigInt {
-    let value = this.get("stakedKeyCount");
+  get keyCount(): BigInt {
+    let value = this.get("keyCount");
     if (!value || value.kind == ValueKind.NULL) {
       throw new Error("Cannot return null for a required field.");
     } else {
@@ -1694,8 +1714,8 @@ export class PoolSubmission extends Entity {
     }
   }
 
-  set stakedKeyCount(value: BigInt) {
-    this.set("stakedKeyCount", Value.fromBigInt(value));
+  set keyCount(value: BigInt) {
+    this.set("keyCount", Value.fromBigInt(value));
   }
 
   get winningKeyCount(): BigInt {
@@ -1787,6 +1807,36 @@ export class PoolSubmission extends Entity {
 
   set claimed(value: boolean) {
     this.set("claimed", Value.fromBoolean(value));
+  }
+
+  get sentryWallet(): string | null {
+    let value = this.get("sentryWallet");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toString();
+    }
+  }
+
+  set sentryWallet(value: string | null) {
+    if (!value) {
+      this.unset("sentryWallet");
+    } else {
+      this.set("sentryWallet", Value.fromString(<string>value));
+    }
+  }
+
+  get isPool(): boolean {
+    let value = this.get("isPool");
+    if (!value || value.kind == ValueKind.NULL) {
+      return false;
+    } else {
+      return value.toBoolean();
+    }
+  }
+
+  set isPool(value: boolean) {
+    this.set("isPool", Value.fromBoolean(value));
   }
 }
 
@@ -1912,7 +1962,7 @@ export class PoolChallengeLoader extends Entity {
   }
 }
 
-export class PoolSubmissionLoader extends Entity {
+export class BulkSubmissionLoader extends Entity {
   _entity: string;
   _field: string;
   _id: string;
@@ -1924,9 +1974,9 @@ export class PoolSubmissionLoader extends Entity {
     this._field = field;
   }
 
-  load(): PoolSubmission[] {
+  load(): BulkSubmission[] {
     let value = store.loadRelated(this._entity, this._id, this._field);
-    return changetype<PoolSubmission[]>(value);
+    return changetype<BulkSubmission[]>(value);
   }
 }
 
