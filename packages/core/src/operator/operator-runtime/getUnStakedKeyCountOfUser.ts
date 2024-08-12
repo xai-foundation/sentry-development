@@ -10,7 +10,7 @@ import { getUserNodeLicenseBalance } from '../../node-license/index.js';
  * @param {string} walletAddress - The Ethereum address of the user.
  * @returns {Promise<number>} The count of unstaked keys of the user
  */
-export const getUnStakedKeysOfUser = async (walletAddress: string): Promise<number> => {
+export const getUnStakedKeyCountOfUser = async (walletAddress: string): Promise<number> => {
     // Get the Ethereum provider
     const provider = getProvider();
 
@@ -20,7 +20,7 @@ export const getUnStakedKeysOfUser = async (walletAddress: string): Promise<numb
     // Create an instance of the Referee contract
     const refereeContract = new ethers.Contract(config.refereeAddress, RefereeAbi, provider);
 
-    // Claim the reward from the Referee contract
+    // Get the count of staked keys for the user from the Referee contract
     const stakedKeysCount = await refereeContract.assignedKeysOfUserCount(walletAddress);
 
     // Return only the requested number of keys
