@@ -1,11 +1,16 @@
 import axios from "axios";
-import { PublicNodeBucketInformation } from "../index.js";
+import { BulkOwnerOrPool, PublicNodeBucketInformation } from "../index.js";
 import { operatorState } from "./operatorState.js";
-import { Challenge, config, getSubgraphHealthStatus } from "../../index.js";
+import { Challenge, config, getSentryWalletsForOperator, getSubgraphHealthStatus, retry } from "../../index.js";
 import { processNewChallenge_V1 } from "./operator-v1/processNewChallenge.js";
 import { loadOperatorKeysFromGraph_V1 } from "./operator-v1/loadOperatorKeysFromGraph.js";
 import { loadOperatorKeysFromRPC_V1 } from "./operator-v1/loadOperatorKeysFromRPC.js";
 import { processClosedChallenges_V1 } from "./operator-v1/processClosedChallenges.js";
+import { loadOperatorWalletsFromGraph } from "./loadOperatorWalletsFromGraph.js";
+import { processNewChallenge } from "./processNewChallenge.js";
+import { processClosedChallenge } from "./processClosedChallenge.js";
+import { loadOperatorWalletsFromRPC } from "./loadOperatorWalletsFromRPC.js";
+import { RefereeConfig } from "@sentry/sentry-subgraph-client";
 
 /**
  * Update the status message for display in the operator desktop app key list
@@ -14,54 +19,68 @@ import { processClosedChallenges_V1 } from "./operator-v1/processClosedChallenge
  */
 export async function listenForChallengesCallback(challengeNumber: bigint, challenge: Challenge, event?: any) {
 
-    if (event && challenge.rollupUsed === config.rollupAddress) {
-        compareWithCDN(challenge)
-            .then(({ publicNodeBucket, error }) => {
-                if (error) {
-                    operatorState.onAssertionMissMatchCb(publicNodeBucket, challenge, error);
-                    return;
-                }
-                operatorState.cachedLogger(`Comparison between PublicNode and Challenger was successful.`);
-            })
-            .catch(error => {
-                operatorState.cachedLogger(`Error on CND check for challenge ${Number(challenge.assertionId)}.`);
-                operatorState.cachedLogger(`${error.message}.`);
-            });
-    }
+    // if (event && challenge.rollupUsed === config.rollupAddress) {
+    //     compareWithCDN(challenge)
+    //         .then(({ publicNodeBucket, error }) => {
+    //             if (error) {
+    //                 operatorState.onAssertionMissMatchCb(publicNodeBucket, challenge, error);
+    //                 return;
+    //             }
+    //             operatorState.cachedLogger(`Comparison between PublicNode and Challenger was successful.`);
+    //         })
+    //         .catch(error => {
+    //             operatorState.cachedLogger(`Error on CND check for challenge ${Number(challenge.assertionId)}.`);
+    //             operatorState.cachedLogger(`${error.message}.`);
+    //         });
+    // }
 
     operatorState.cachedLogger(`Received new challenge with number: ${challengeNumber}.`);
     operatorState.cachedLogger(`Processing challenge...`);
 
     // Add a delay of 1 -300 seconds to the new challenge process so not all operators request the subgraph at the same time
-    const delay = Math.floor(Math.random() * 301);
-    await new Promise((resolve) => {
-        setTimeout(resolve, delay * 1000);
-    })
+    // const delay = Math.floor(Math.random() * 301);
+    // await new Promise((resolve) => {
+    //     setTimeout(resolve, delay * 1000);
+    // })
 
     try {
         const graphStatus = await getSubgraphHealthStatus();
+
+        let bulkOwnersAndPools: BulkOwnerOrPool[];
+        let _refereeConfig: RefereeConfig | undefined;
         if (graphStatus.healthy) {
-            const { sentryWalletMap, sentryKeysMap, nodeLicenseIds, mappedPools, refereeConfig } =
-                await loadOperatorKeysFromGraph_V1(operatorState.operatorAddress, challengeNumber - 1n);
 
-            await processNewChallenge_V1(challengeNumber, challenge, nodeLicenseIds, sentryKeysMap, sentryWalletMap, mappedPools, refereeConfig);
-            // check the previous challenge, that should be closed now
-            if (challengeNumber > BigInt(1)) {
-                await processClosedChallenges_V1(challengeNumber - BigInt(1), nodeLicenseIds, sentryKeysMap, sentryWalletMap);
-            }
-
+            const { wallets, pools, refereeConfig } = await retry(() => getSentryWalletsForOperator(operatorState.operatorAddress, operatorState.passedInOwnersAndPools, { latestChallengeNumber: challengeNumber - 1n, winningKeyCount: true, claimed: false }));
+            _refereeConfig = refereeConfig;
+            bulkOwnersAndPools = await loadOperatorWalletsFromGraph(operatorState.operatorAddress, { wallets, pools }, challengeNumber - 1n);
 
         } else {
             operatorState.cachedLogger(`Revert to RPC call instead of using subgraph. Subgraph status error: ${graphStatus.error}`)
 
-            const { sentryKeysMap, nodeLicenseIds } = await loadOperatorKeysFromRPC_V1(operatorState.operatorAddress);
+            // const { sentryKeysMap, nodeLicenseIds } = await loadOperatorKeysFromRPC_V1(operatorState.operatorAddress);
 
-            await processNewChallenge_V1(challengeNumber, challenge, nodeLicenseIds, sentryKeysMap);
-            // check the previous challenge, that should be closed now
-            if (challengeNumber > BigInt(1)) {
-                await processClosedChallenges_V1(challengeNumber - BigInt(1), nodeLicenseIds, sentryKeysMap);
-            }
+            // await processNewChallenge_V1(challengeNumber, challenge, nodeLicenseIds, sentryKeysMap);
+            // // check the previous challenge, that should be closed now
+            // if (challengeNumber > BigInt(1)) {
+            //     await processClosedChallenges_V1(challengeNumber - BigInt(1), nodeLicenseIds, sentryKeysMap);
+            // }
+
+            bulkOwnersAndPools = await loadOperatorWalletsFromRPC(operatorState.operatorAddress);
+
         }
+
+        await processNewChallenge(challengeNumber, challenge, bulkOwnersAndPools, _refereeConfig);
+
+        // const { sentryWalletMap, sentryKeysMap, nodeLicenseIds, mappedPools, refereeConfig } =
+        //     await loadOperatorKeysFromGraph_V1(operatorState.operatorAddress, challengeNumber - 1n);
+
+        // await processNewChallenge_V1(challengeNumber, challenge, nodeLicenseIds, sentryKeysMap, sentryWalletMap, mappedPools, refereeConfig);
+        // check the previous challenge, that should be closed now
+        if (challengeNumber > BigInt(1)) {
+            // await processClosedChallenges_V1(challengeNumber - BigInt(1), nodeLicenseIds, sentryKeysMap, sentryWalletMap);
+            await processClosedChallenge(challengeNumber - BigInt(1), bulkOwnersAndPools);
+        }
+
     } catch (error: any) {
         operatorState.cachedLogger(`Error processing new challenge in listener callback: - ${error && error.message ? error.message : error}`);
     }

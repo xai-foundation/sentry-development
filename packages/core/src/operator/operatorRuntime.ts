@@ -6,6 +6,7 @@ import {
 } from "../index.js";
 import { operatorState } from "./operator-runtime/operatorState.js";
 import { bootOperatorRuntime_V1 } from "./operator-runtime/operator-v1/bootOperatorRuntime.js";
+import { BulkSubmission } from "@sentry/sentry-subgraph-client";
 
 export enum NodeLicenseStatus {
     WAITING_IN_QUEUE = "Booting Operator For Key", // waiting to do an action, but in a queue
@@ -23,6 +24,17 @@ export interface NodeLicenseInformation {
 }
 
 export type NodeLicenseStatusMap = Map<bigint, NodeLicenseInformation>;
+
+
+export interface SentryAddressInformation {
+    address: string
+    keyCount: string
+    isPool: boolean
+    status: string | NodeLicenseStatus;
+}
+
+//New status map for status mapped to a wallet or a pool address
+export type SentryAddressStatusMap = Map<string, NodeLicenseInformation>;
 
 export type PublicNodeBucketInformation = {
     assertion: number,
@@ -44,12 +56,23 @@ export type ProcessChallenge = {
 //Used for maximum keysIds in one batch tx
 export const KEYS_PER_BATCH = 100;
 
+//Type for shared object of either pool or owner, used for submitting bulk assertions (Referee does not differentiate between pool or owner when doing a bulk submission)
+export type BulkOwnerOrPool = {
+    address: string,
+    isPool: boolean,
+    name?: string,
+    keyCount: number, // only unstaked keys for owner, totalStakedKeys for pool
+    stakedEsXaiAmount: bigint, // used to calculate the boost factor
+    bulkSubmissions?: BulkSubmission[]
+}
+
 /**
  * Operator runtime function.
  * @param {ethers.Signer} signer - The signer.
  * @param {((status: NodeLicenseStatusMap) => void)} [statusCallback] - Optional function to monitor the status of the runtime.
  * @param {((log: string) => void)} [logFunction] - Optional function to log the process.
  * @param {string[]} [operatorOwners] - Optional array of addresses that should replace "owners" if passed in.
+ * @param {boolean} [startFromGraph] - Optional dev param
  * @returns {Promise<() => Promise<void>>} The stop function.
  */
 export async function operatorRuntime(
@@ -57,8 +80,8 @@ export async function operatorRuntime(
     statusCallback: (status: NodeLicenseStatusMap) => void = (_) => { },
     logFunction: (log: string) => void = (_) => { },
     operatorOwners?: string[],
-    onAssertionMissMatch: (publicNodeData: PublicNodeBucketInformation | undefined, challenge: Challenge, message: string) => void = (_) => { }
-
+    onAssertionMissMatch: (publicNodeData: PublicNodeBucketInformation | undefined, challenge: Challenge, message: string) => void = (_) => { },
+    startFromGraph: boolean = true
 ): Promise<() => Promise<void>> {
 
     operatorState.cachedLogger = logFunction;
@@ -83,7 +106,7 @@ export async function operatorRuntime(
     operatorState.operatorAddress = await signer.getAddress();
     logFunction(`Fetched address of operator ${operatorState.operatorAddress}.`);
 
-    let closeChallengeListener = await bootOperatorRuntime_V1(logFunction);
+    let closeChallengeListener = await bootOperatorRuntime_V1(logFunction, startFromGraph);
     logFunction(`Started listener for new challenges.`);
 
     const fetchBlockNumber = async () => {

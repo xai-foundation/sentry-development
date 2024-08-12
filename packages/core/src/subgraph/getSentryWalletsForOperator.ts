@@ -10,10 +10,43 @@ import { config } from "../config.js";
  */
 export async function getSentryWalletsForOperator(
   operator: string,
-  whitelist?: string[]
+  whitelist?: string[],
+  submissionsFilter?: { winningKeyCount?: boolean, claimed?: boolean, latestChallengeNumber?: bigint }
 ): Promise<{ wallets: SentryWallet[], pools: PoolInfo[], refereeConfig: RefereeConfig }> {
 
   const client = new GraphQLClient(config.subgraphEndpoint);
+
+  let submissionQuery = ``;
+  let submissionQueryWallets = ``;
+  if (submissionsFilter) {
+
+    let submissionQueryFilter: string[] = [];
+    const { winningKeyCount, claimed, latestChallengeNumber } = submissionsFilter;
+    if (winningKeyCount != undefined) {
+      submissionQueryFilter.push(`winningKeyCount_gt: 0`)
+    }
+    if (claimed != undefined) {
+      submissionQueryFilter.push(`claimed: ${claimed}`)
+    }
+    if (latestChallengeNumber != undefined) {
+      submissionQueryFilter.push(`challengeId_gte: ${latestChallengeNumber.toString()}`)
+    }
+
+    submissionQuery = gql`
+        submissions(first: 10000, orderBy: challengeId, orderDirection: desc, where: {${submissionQueryFilter.join(",")}}) { 
+          challengeId
+          winningKeyCount
+          claimed 
+        }
+      `
+    submissionQueryWallets = gql`
+        bulkSubmissions(first: 10000, orderBy: challengeId, orderDirection: desc, where: {${submissionQueryFilter.join(",")}}) { 
+          challengeId
+          winningKeyCount
+          claimed 
+        }
+      `
+  }
 
   const query = gql`
     query OperatorAddresses {
@@ -28,6 +61,7 @@ export async function getSentryWalletsForOperator(
         v1EsXaiStakeAmount
         stakedKeyCount
         keyCount
+        ${submissionQueryWallets}
       }
       poolInfos(first: 1000, where: {or: [{owner: "${operator.toLowerCase()}"}, {delegateAddress: "${operator.toLowerCase()}"}]}) {
         address
@@ -36,6 +70,7 @@ export async function getSentryWalletsForOperator(
         totalStakedEsXaiAmount
         totalStakedKeyAmount
         metadata
+        ${submissionQuery}
       }
       refereeConfig(id: "RefereeConfig") {
         maxKeysPerPool
