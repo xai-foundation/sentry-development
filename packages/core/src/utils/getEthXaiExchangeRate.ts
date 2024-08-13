@@ -12,7 +12,12 @@ export async function getEthXaiExchangeRate(): Promise<{ exchangeRate: bigint}> 
     
     const abi = ["function latestAnswer() external view returns (int256)"];
 
-    const provider = getProvider();
+    // Get the provider
+    const providerUrls = [
+        config.arbitrumOneJsonRpcUrl,
+        config.publicRPC,
+    ];
+    const provider = getProvider(providerUrls[Math.floor(Math.random() * providerUrls.length)]);
 
     // Create an instance of the Chainlink price feed contract
     const ethPriceFeedContract = new ethers.Contract(config.chainlinkEthUsdPriceFeed, abi, provider);

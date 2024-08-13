@@ -14,7 +14,12 @@ export async function getXaiBalance(wallet: string): Promise<{ balance: bigint}>
         return { balance: BigInt(0) };
     }
 
-    const provider = getProvider();
+    // Get the provider
+    const providerUrls = [ 
+        config.arbitrumOneJsonRpcUrl,
+        config.publicRPC,
+    ];
+    const provider = getProvider(providerUrls[Math.floor(Math.random() * providerUrls.length)]);
 
     // Create an instance of the Xai token contract
     const tokenContract = new ethers.Contract(config.xaiAddress, XaiAbi, provider);

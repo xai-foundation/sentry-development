@@ -43,7 +43,7 @@ export function ActionSection(): JSX.Element {
         return getApproveButtonText();
     }, [mintWithEth.isPending, mintWithXai.isPending, approve.isPending, chain, getApproveButtonText]);
 
-    const handleBuyWithXaiClicked = async () => { 
+    const handleBuyWithXaiClicked = async () => {
         if (getTokenButtonText().startsWith("Approve")) {
             handleApproveClicked();
         } else {
@@ -59,7 +59,7 @@ export function ActionSection(): JSX.Element {
                     <PrimaryButton
                         onClick={() => handleMintWithEthClicked()}
                         className={`w-full h-16 ${ready ? "bg-[#F30919] global-clip-path" : "bg-gray-400 cursor-default !text-[#726F6F]"} text-lg text-white p-2 uppercase font-bold`}
-                        isDisabled={!ready}
+                        isDisabled={!ready || getEthButtonText().startsWith("Insufficient")}
                         btnText={getEthButtonText()}
                     />
                 ) : (

@@ -15,7 +15,12 @@ export async function getEsXaiAllowance(wallet: string, operator: string): Promi
         return { approvalAmount: BigInt(0) };
     }
 
-    const provider = getProvider();
+    // Get the provider
+    const providerUrls = [
+        config.arbitrumOneJsonRpcUrl,
+        config.publicRPC,
+    ];
+    const provider = getProvider(providerUrls[Math.floor(Math.random() * providerUrls.length)]);
 
     // Create an instance of the esXai token contract
     const tokenContract = new ethers.Contract(config.esXaiAddress, XaiAbi, provider);

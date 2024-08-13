@@ -21,7 +21,12 @@ export interface CheckoutTierSummary {
  */
 export async function getPriceForQuantity(quantity: number): Promise<{ price: bigint, nodesAtEachPrice: CheckoutTierSummary[] }> {
 
-    const provider = getProvider();
+    // Get the provider
+    const providerUrls = [
+        config.arbitrumOneJsonRpcUrl,
+        config.publicRPC,
+    ];
+    const provider = getProvider(providerUrls[Math.floor(Math.random() * providerUrls.length)]);
 
     // Create an instance of the NodeLicense contract
     const nodeLicenseContract = new ethers.Contract(config.nodeLicenseAddress, NodeLicenseAbi, provider);
@@ -78,7 +83,12 @@ export async function getPriceForQuantity(quantity: number): Promise<{ price: bi
  */
 export async function getPrice(quantity: number): Promise<{ price: bigint }> {
 
-    const provider = getProvider();
+    // Get the provider
+    const providerUrls = [
+        config.arbitrumOneJsonRpcUrl,
+        config.publicRPC,
+    ];
+    const provider = getProvider(providerUrls[Math.floor(Math.random() * providerUrls.length)]);
 
     // Create an instance of the NodeLicense contract
     const nodeLicenseContract = new ethers.Contract(config.nodeLicenseAddress, NodeLicenseAbi, provider);
