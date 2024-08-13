@@ -30,7 +30,7 @@ export let config = {
   "defaultNetworkName": "arbitrumSepolia",
   "subgraphEndpoint": "https://subgraph.satsuma-prod.com/f37507ea64fb/xai/sentry-sepolia/version/0.0.16-sepolia/api",
   "publicRPC": "https://arb-sepolia.g.alchemy.com/v2/8aXl_Mw4FGFlgxQO8Jz7FVPh2cg5m2_B",
-  "alchemyApiKey": "oD4X3JXvJclnt36mDkqnp9CO2sZkNhYT"
+  "alchemyApiKey": "8aXl_Mw4FGFlgxQO8Jz7FVPh2cg5m2_B"
 };
 
 export function setConfig(_config: any) { config = _config; }

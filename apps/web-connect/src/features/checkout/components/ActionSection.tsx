@@ -39,7 +39,6 @@ export function ActionSection(): JSX.Element {
      */
     const getTokenButtonText = useCallback(() => {
         if (mintWithEth.isPending || mintWithXai.isPending || approve.isPending) return "WAITING FOR CONFIRMATION..";
-        // if (chain?.id !== 42161) return "Please Switch to Arbitrum One";
         return getApproveButtonText();
     }, [mintWithEth.isPending, mintWithXai.isPending, approve.isPending, chain, getApproveButtonText]);
 
