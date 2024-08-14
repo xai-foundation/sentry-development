@@ -243,13 +243,17 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
     event NewBulkSubmission(uint256 indexed challengeId, address indexed bulkAddress, uint256 stakedKeys, uint256 winningKeys);
     event UpdateBulkSubmission(uint256 indexed challengeId, address indexed bulkAddress, uint256 stakedKeys, uint256 winningKeys, uint256 increase, uint256 decrease);
 
-    // function initialize(address _refereeCalculationsAddress) public reinitializer(17) {
-    //     refereeCalculationsAddress = _refereeCalculationsAddress;
+    function initialize() public reinitializer(19) {
 
-    //     //TODO update with correct values on deploy
-    //     // maxStakeAmountPerLicense = 2_000_000 * 10 ** 18;
-    //     // maxKeysPerPool = 100_000;
-    // }
+        maxStakeAmountPerLicense = 200 * 10 ** 18;
+        maxKeysPerPool = 100_000;
+
+        // Updated base chance to 0.01
+        stakeAmountBoostFactors[0] = 150; // 0.015
+        stakeAmountBoostFactors[1] = 200; // 0.02
+        stakeAmountBoostFactors[2] = 300; // 0.03
+        stakeAmountBoostFactors[3] = 700; // 0.07
+    }
 
     modifier onlyPoolFactory() {
         require(msg.sender == poolFactoryAddress, "1");
@@ -915,7 +919,7 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
     * @param _challengeId The ID of the challenge.
     *
      */
-	function _updateBulkAssertion(
+    function _updateBulkAssertion(
 		address _bulkAddress,
 		uint256 _challengeId
 	) internal {
@@ -933,27 +937,29 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
             numberOfKeys = NodeLicense(nodeLicenseAddress).balanceOf(_bulkAddress) - assignedKeysOfUserCount[_bulkAddress];
         }
 
-        require(numberOfKeys > 0, "57");
+        uint256 winningKeyCount = 0;
 
-        // Set the boost factor intially to 100
-        uint256 boostFactor = 100;
+        if(numberOfKeys > 0){
+            // Set the boost factor intially to 100
+            uint256 boostFactor = 100;
 
-        // If the bulk address is a pool, determine the boost factor
-        if(isPool){
-            // Get the stakedAmount of _poolAddress for determining boostFactor
-            uint256 stakedAmount = getMaxStakedAmount(_bulkAddress, address(0));
-            // Determine the boostFactor
-            boostFactor = _getBoostFactor(stakedAmount);
+            // If the bulk address is a pool, determine the boost factor
+            if(isPool){
+                // Get the stakedAmount of _poolAddress for determining boostFactor
+                uint256 stakedAmount = getMaxStakedAmount(_bulkAddress, address(0));
+                // Determine the boostFactor
+                boostFactor = _getBoostFactor(stakedAmount);
+            }
+
+            // Determine the number of winning keys
+            winningKeyCount = getWinningKeyCount(numberOfKeys, boostFactor, _bulkAddress, _challengeId, bulkSubmissions[_challengeId][_bulkAddress].assertionStateRootOrConfirmData, challenges[_challengeId].challengerSignedHash);
         }
-
-        // Determine the number of winning keys
-        uint256 winningKeyCount = getWinningKeyCount(numberOfKeys, boostFactor, _bulkAddress, _challengeId, bulkSubmissions[_challengeId][_bulkAddress].assertionStateRootOrConfirmData, challenges[_challengeId].challengerSignedHash);
-
-        uint256 prevWinningCount = bulkSubmissions[_challengeId][_bulkAddress].winningKeyCount;
 
         // Determine the winning key count increase or decrease amounts
         uint256 winningKeysIncreaseAmount = 0;
         uint256 winningKeysDecreaseAmount = 0;
+
+        uint256 prevWinningCount = bulkSubmissions[_challengeId][_bulkAddress].winningKeyCount;
 
         // If winning key count has increased, add the difference to the total number of eligible claimers
         if(winningKeyCount > prevWinningCount){
@@ -1042,26 +1048,27 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
             require(PoolFactory10(poolFactoryAddress).validateSubmitPoolAssertion(_bulkAddress, msg.sender), "17");
         }
 
-        // Confirm there are keys to submit
-        require(numberOfKeys > 0, "57");    
-
         // Confirm not already submitted
         require(!bulkSubmissions[_challengeId][_bulkAddress].submitted, "54");
+        
+        uint256 winningKeyCount = 0;
 
-        // Set the boost factor intially to 100
-        uint256 boostFactor = 100;
+        if(numberOfKeys > 0){
+            // Set the boost factor intially to 100 (0.01%)
+            uint256 boostFactor = 100;
 
-        // If the bulk address is a pool, determine the boost factor
-        if(isPool){
-            // Get the stakedAmount of _poolAddress for determining boostFactor
-            uint256 stakedAmount = getMaxStakedAmount(_bulkAddress, address(0));
+            // If the bulk address is a pool, determine the boost factor
+            if(isPool){
+                // Get the stakedAmount of _poolAddress for determining boostFactor
+                uint256 stakedAmount = getMaxStakedAmount(_bulkAddress, address(0));
 
-            // Determine the boost factor
-            boostFactor = _getBoostFactor(stakedAmount);
+                // Determine the boost factor
+                boostFactor = _getBoostFactor(stakedAmount);
+            }
+
+            // Determine the number of winning keys
+            winningKeyCount = getWinningKeyCount(numberOfKeys, boostFactor, _bulkAddress, _challengeId, _confirmData, challenges[_challengeId].challengerSignedHash);
         }
-
-        // Determine the number of winning keys
-        uint256 winningKeyCount = getWinningKeyCount(numberOfKeys, boostFactor, _bulkAddress, _challengeId, _confirmData, challenges[_challengeId].challengerSignedHash);
 
         // Update the challenge by adding the winning key count to the total winning keys
         challenges[_challengeId].numberOfEligibleClaimers += winningKeyCount;
@@ -1101,28 +1108,27 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
         BulkSubmission storage bulkSubmission = bulkSubmissions[_challengeId][_bulkAddress];
 
         // Check if the bulk submission is elegible for a payout
-        if (bulkSubmission.submitted && !bulkSubmission.claimed && bulkSubmission.winningKeyCount > 0) {
+        require(bulkSubmission.submitted && !bulkSubmission.claimed && bulkSubmission.winningKeyCount > 0, "58");
 
-            uint256 reward = challengeToClaimFor.rewardAmountForClaimers / challengeToClaimFor.numberOfEligibleClaimers;
-            uint256 rewardMintAmount = 0;
+        uint256 reward = challengeToClaimFor.rewardAmountForClaimers / challengeToClaimFor.numberOfEligibleClaimers;
+        uint256 rewardMintAmount = 0;
 
-            // Calculate the amount to mint to the reward address
-            rewardMintAmount = (reward * bulkSubmission.winningKeyCount);     
+        // Calculate the amount to mint to the reward address
+        rewardMintAmount = (reward * bulkSubmission.winningKeyCount);     
 
-            // mark the submission as claimed
-            bulkSubmission.claimed = true;
-            // increment the amount claimed on the challenge
-            challenges[_challengeId].amountClaimedByClaimers += rewardMintAmount;    
-		
-            esXai(esXaiAddress).mint(_bulkAddress, rewardMintAmount);
+        // mark the submission as claimed
+        bulkSubmission.claimed = true;
+        // increment the amount claimed on the challenge
+        challenges[_challengeId].amountClaimedByClaimers += rewardMintAmount;    
+    
+        esXai(esXaiAddress).mint(_bulkAddress, rewardMintAmount);
 
-            // Increment the total claims of this address
-            _lifetimeClaims[_bulkAddress] += rewardMintAmount;
+        // Increment the total claims of this address
+        _lifetimeClaims[_bulkAddress] += rewardMintAmount;
 
-            // unallocate the tokens that have now been converted to esXai
-            _allocatedTokens -= rewardMintAmount;
-            emit BulkRewardsClaimed(_challengeId, _bulkAddress, rewardMintAmount, bulkSubmission.winningKeyCount);
-        }
+        // unallocate the tokens that have now been converted to esXai
+        _allocatedTokens -= rewardMintAmount;
+        emit BulkRewardsClaimed(_challengeId, _bulkAddress, rewardMintAmount, bulkSubmission.winningKeyCount);
     }
 
     /**

@@ -17,7 +17,7 @@ contract TinyKeysAirdrop is Initializable, AccessControlUpgradeable {
 
     // Address for referee contract
     address public refereeAddress;
-    
+
     // Pool Factory Address
     address public poolFactoryAddress;
 
@@ -33,52 +33,45 @@ contract TinyKeysAirdrop is Initializable, AccessControlUpgradeable {
     // Airdrop Started
     bool public airdropStarted;
 
+    // Marker for keyids to be auto staked
+    mapping(uint256 => uint256[2]) public keyToStartEnd;
+
     // Airdrop Ended
     bool public airdropEnded;
 
-    // Marker for keyids to be auto staked
-    mapping(uint256 => uint256[2]) public keyToStartEnd;
+    // Stake counter
+    uint256 public stakeCounter; // Will be incremented after each airdrop segment
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[500] private __gap;
+    uint256[497] private __gap;
 
     // Events for various actions within the contract
     event AirdropStarted(uint256 totalSupplyAtStart, uint256 keyMultiplier);
     event AirdropSegmentComplete(uint256 startingKeyId, uint256 endingKeyId);
+    event AirdropSegmentStakeComplete(
+        address indexed owner,
+        address indexed poolAddress,
+        uint256 startingKeyId,
+        uint256 endingKeyId
+    );
     event AirdropEnded();
 
-    /**
-     * @dev Initializes the contract with the provided addresses.
-     * @dev Grants the DEFAULT_ADMIN_ROLE to the deployer.
-     * @param _nodeLicenseAddress Address of the NodeLicense NFT contract
-     * @param _refereeAddress Address for referee contract
-     * @param _keyMultiplier Key Multiplier for airdrop - the number of keys to be airdropped per node license
-     */
-    function initialize(address _nodeLicenseAddress, address _refereeAddress, address _poolFactoryAddress, uint256 _keyMultiplier) public initializer {
-        __AccessControl_init();
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-
-        refereeAddress = _refereeAddress;
-        nodeLicenseAddress = _nodeLicenseAddress;
-        poolFactoryAddress = _poolFactoryAddress;
-
-        keyMultiplier = _keyMultiplier;
-
-        airdropCounter = 1;
-        airdropStarted = false;
-        airdropEnded = false;
-    }
+    // function initialize() public reinitializer(2) {
+    //     airdropStarted = true;
+    //     airdropEnded = false;
+    //     stakeCounter = 4329;
+    // }
 
     /**
      * @notice Start the airdrop
      * @dev This function will be called by the admin to start the airdrop
      * @dev It will set the total supply at start and emit the AirdropStarted event
      */
-    function startAirdrop() external onlyRole(DEFAULT_ADMIN_ROLE) { 
+    function startAirdrop() external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(!airdropStarted, "Airdrop already started");
         // Start the airdrop
         // This will notify the node license contract to start the airdrop
@@ -89,88 +82,109 @@ contract TinyKeysAirdrop is Initializable, AccessControlUpgradeable {
 
         // Set the total supply of node licenses at the start of the airdrop
         totalSupplyAtStart = NodeLicense10(nodeLicenseAddress).totalSupply();
-        
+
         airdropStarted = true;
         emit AirdropStarted(totalSupplyAtStart, keyMultiplier);
     }
 
-    
-    function processAirdropSegmentOnlyMint(uint256 _qtyToProcess) external onlyRole(DEFAULT_ADMIN_ROLE)  {
+    function processAirdropSegmentOnlyMint(
+        uint256 _qtyToProcess
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(airdropStarted, "Airdrop not started");
         require(airdropCounter <= totalSupplyAtStart, "Airdrop complete");
         // Start where we left off
         uint256 startingKeyId = airdropCounter;
         // Ensure we don't go over the total supply
-        uint256 endingKeyId = Math.min(airdropCounter + _qtyToProcess, totalSupplyAtStart);     
+        uint256 endingKeyId = Math.min(
+            airdropCounter + _qtyToProcess,
+            totalSupplyAtStart
+        );
         // Connect to the referee and node license contracts
         NodeLicense10 nodeLicense = NodeLicense10(nodeLicenseAddress);
+
         // Loop through the range of node licenses
         // Needs to be <= to include the last key
         for (uint256 i = startingKeyId; i <= endingKeyId; i++) {
-            
-            // Moved this into the node license contract
-            // It now returns the start of the range
-            // Reducing the number of calls to the contract from 3 to 1
-            // uint256 owner = nodeLicense.ownerOf(i);
-            // uint256 start = nodeLicense.totalSupply() + 1;
-
+            address owner = nodeLicense.ownerOf(i);
             // Mint the airdropped keys for the owner
-            nodeLicense.mintForAirdrop(keyMultiplier, nodeLicense.ownerOf(i));
-
-            // uint256 end = (start + keyMultiplier) - 1;
-
-            // keyToStartEnd[i] = [start, end];
+            nodeLicense.mintForAirdrop(keyMultiplier, owner);
         }
 
         // Update the airdrop counter
         // Increment the counter by the ending key id + 1
-        // If the airdrop counter exceeds the total supply at start this means the airdrop is complete
-        airdropCounter = endingKeyId < totalSupplyAtStart ? endingKeyId + 1 : endingKeyId;
+        airdropCounter = endingKeyId + 1;
         emit AirdropSegmentComplete(startingKeyId, endingKeyId);
     }
 
-    function processAirdropSegmentOnlyStake(uint256[] memory keyIds) external onlyRole(DEFAULT_ADMIN_ROLE)  {
+    function processAirdropSegmentOnlyStake(
+        uint256 _qtyToProcess
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(airdropStarted, "Airdrop not started");
+        require(!airdropEnded, "Airdrop already complete");
+        require(
+            stakeCounter <= airdropCounter,
+            "Cannot stake non aidropped keys"
+        );
 
-        for (uint256 j = 0; j < keyIds.length; j++) {
-            uint256 keyId = keyIds[j];
-            uint256 startKeyId = keyToStartEnd[keyId][0];
-            uint256 endKeyId = keyToStartEnd[keyId][1];
+        // Start where we left off
+        uint256 startingKeyId = stakeCounter;
 
-            require(endKeyId > startKeyId, "Invalid input");
+        // Ensure we don't go over the total supply
+        uint256 endingKeyId = Math.min(
+            stakeCounter + _qtyToProcess,
+            totalSupplyAtStart
+        );
 
-            Referee16 referee = Referee16(refereeAddress);
-            address owner = NodeLicense10(nodeLicenseAddress).ownerOf(keyId);
+        // Connect to the referee and node license contracts
+        NodeLicense10 nodeLicense = NodeLicense10(nodeLicenseAddress);
+        Referee16 referee = Referee16(refereeAddress);
 
-            address poolAddress = referee.assignedKeyToPool(keyId);
+        // Loop through the range of node licenses
+        // Needs to be <= to include the last key
+        for (uint256 i = startingKeyId; i <= endingKeyId; i++) {
+            // Get the owner of the node license
+            address owner = nodeLicense.ownerOf(i);
 
-            //TODO do we need to allow this and just return ?
-            // require(poolAddress != address(0), "Key not staked");
-            if(poolAddress == address(0)){
-                continue;
+            // Get the pool address for the owner
+            address poolAddress = referee.assignedKeyToPool(i);
+
+            // If the pool address is not 0, stake the newly minted keys
+            if (poolAddress != address(0)) {
+                uint256[] memory stakeKeyIds = new uint256[](keyMultiplier);
+                // Determine the initial token id for the newly minted keys
+                // Calculate the starting ID for the new batch of tokens
+                uint256 tokensAlreadyProcessed = 112935 + ((i - 4329) * keyMultiplier);
+                uint256 newTokenStartId = tokensAlreadyProcessed + 1;
+
+                // Create an array of key ids to stake
+                for (uint256 j = 0; j < keyMultiplier; j++) {
+                    stakeKeyIds[j] = newTokenStartId + j;
+                }
+
+                // Stake the keys
+                PoolFactory10(poolFactoryAddress).stakeKeysAdmin(
+                    poolAddress,
+                    stakeKeyIds,
+                    owner
+                );
+
+                // Emit the event
+                emit AirdropSegmentStakeComplete(owner, poolAddress, stakeKeyIds[0], stakeKeyIds[stakeKeyIds.length-1]);
             }
-
-            //Array size needs to be 1 more than the difference between the start and end key ids
-            uint256[] memory stakeKeyIds = new uint256[](endKeyId - startKeyId + 1);
-            for (uint256 i = 0; i < stakeKeyIds.length; i++) {
-                stakeKeyIds[i] = startKeyId + i;
-            }
-
-            PoolFactory10(poolFactoryAddress).stakeKeysAdmin(poolAddress, stakeKeyIds, owner);
         }
+
+        // Update the stake counter
+        // Increment the counter by the ending key id + 1
+        stakeCounter = endingKeyId + 1;
     }
 
     function completeAirDrop() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(airdropStarted, "Airdrop not started");
-        require(!airdropEnded, "Airdrop already complete");
-        require(airdropCounter == totalSupplyAtStart, "Airdrop not complete");
-
-        // Notify the node license contract that the airdrop is complete
-        NodeLicense10(nodeLicenseAddress).finishAirdrop(refereeAddress, keyMultiplier + 1);
+        // require(airdropStarted, "Airdrop not started");
+        // require(!airdropEnded, "Airdrop already complete");
+        // require(airdropCounter == totalSupplyAtStart, "Airdrop not complete");
 
         airdropStarted = false;
         airdropEnded = true;
         emit AirdropEnded();
     }
-
 }
