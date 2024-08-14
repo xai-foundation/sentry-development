@@ -11,7 +11,7 @@ const PurchaseSuccessful: React.FC<IPurchaseSuccessful> = ({ returnToClient }) =
     const { mintWithEth, mintWithXai, blockExplorer } = useWebBuyKeysContext();
 
 	const getHash = () => {
-		const hash = mintWithEth.data?.hash ?? mintWithXai.data?.hash;
+		const hash = mintWithEth.data ?? mintWithXai.data;
 		if(!hash) {
 			throw new Error("No hash found");
 		}
@@ -19,7 +19,6 @@ const PurchaseSuccessful: React.FC<IPurchaseSuccessful> = ({ returnToClient }) =
 	}
 
 	const handleReturnToClient = () => {
-        window.location = `xai-sentry://purchase-successful?txHash=${getHash()}` as unknown as Location;
 		returnToClient(getHash());
 	}
 

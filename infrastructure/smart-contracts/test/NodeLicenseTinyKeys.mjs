@@ -292,14 +292,14 @@ export function NodeLicenseTinyKeysTest(deployInfrastructure, poolConfigurations
             const user2BalanceBefore = await nodeLicense.balanceOf(addr2.address);
             const user3BalanceBefore = await nodeLicense.balanceOf(addr3.address);
 			
-			const winningStateRoot = await findWinningStateRoot(referee, [1], 0);
+			const stateRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
             // Submit two challenges so that the contract tests will run successfully
             const startingAssertion = 100;
             await referee.connect(challenger).submitChallenge(
                 startingAssertion,
                 startingAssertion - 1,
-                winningStateRoot,
+                stateRoot,
                 0,
                 "0x0000000000000000000000000000000000000000000000000000000000000000"
             );
@@ -347,17 +347,13 @@ export function NodeLicenseTinyKeysTest(deployInfrastructure, poolConfigurations
 
             // Process Airdrop
             let qtyToProcess = BigInt(5);
-            let airdropCounter = await tinyKeysAirDrop.airdropCounter();
 
-            const tokenIds1 = [1,2,3,4,5];
-            const tokenIds2 = [6,7,8,9,10];
-            const tokenIds3 = [11,12,13];
             await tinyKeysAirDrop.connect(deployer).processAirdropSegmentOnlyMint(qtyToProcess);
-            await tinyKeysAirDrop.connect(deployer).processAirdropSegmentOnlyStake(tokenIds1);
+            await tinyKeysAirDrop.connect(deployer).processAirdropSegmentOnlyStake(qtyToProcess);
             await tinyKeysAirDrop.connect(deployer).processAirdropSegmentOnlyMint(qtyToProcess);
-            await tinyKeysAirDrop.connect(deployer).processAirdropSegmentOnlyStake(tokenIds2);
+            await tinyKeysAirDrop.connect(deployer).processAirdropSegmentOnlyStake(qtyToProcess);
             await tinyKeysAirDrop.connect(deployer).processAirdropSegmentOnlyMint(3);
-            await tinyKeysAirDrop.connect(deployer).processAirdropSegmentOnlyStake(tokenIds3);
+            await tinyKeysAirDrop.connect(deployer).processAirdropSegmentOnlyStake(qtyToProcess);
             await tinyKeysAirDrop.connect(deployer).completeAirDrop();
             
             // Confirm balances after
