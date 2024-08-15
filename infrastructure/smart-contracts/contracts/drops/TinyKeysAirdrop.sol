@@ -49,6 +49,7 @@ contract TinyKeysAirdrop is Initializable, AccessControlUpgradeable {
     // Events for various actions within the contract
     event AirdropStarted(uint256 totalSupplyAtStart, uint256 keyMultiplier);
     event AirdropSegmentComplete(uint256 startingKeyId, uint256 endingKeyId);
+    event AirdropSegmentStakeComplete(address indexed owner, address indexed poolAddress, uint256 startingKeyId, uint256 endingKeyId);
     event AirdropEnded();
 
     /**
@@ -125,7 +126,7 @@ contract TinyKeysAirdrop is Initializable, AccessControlUpgradeable {
     function processAirdropSegmentOnlyStake(uint256 _qtyToProcess) external onlyRole(DEFAULT_ADMIN_ROLE)  {
         require(airdropStarted, "Airdrop not started");
         require(!airdropEnded, "Airdrop already complete");
-        require(stakeCounter <= totalSupplyAtStart, "Airdrop complete");
+        require(stakeCounter <= airdropCounter, "Cannot stake non aidropped keys");
 
         // Start where we left off
         uint256 startingKeyId = stakeCounter;
@@ -161,6 +162,9 @@ contract TinyKeysAirdrop is Initializable, AccessControlUpgradeable {
                 
                 // Stake the keys
                 PoolFactory2(poolFactoryAddress).stakeKeysAdmin(poolAddress, stakeKeyIds, owner);
+
+                // Emit the event
+                emit AirdropSegmentStakeComplete(owner, poolAddress, stakeKeyIds[0], stakeKeyIds[stakeKeyIds.length-1]);
             }
         }
 

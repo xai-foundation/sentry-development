@@ -50,7 +50,7 @@ export async function listenForChallengesCallback(challengeNumber: bigint, chall
         let _refereeConfig: RefereeConfig | undefined;
         if (graphStatus.healthy) {
 
-            const { wallets, pools, refereeConfig } = await retry(() => getSentryWalletsForOperator(operatorState.operatorAddress, operatorState.passedInOwnersAndPools, { latestChallengeNumber: challengeNumber - 1n, winningKeyCount: true, claimed: false }));
+            const { wallets, pools, refereeConfig } = await retry(() => getSentryWalletsForOperator(operatorState.operatorAddress, { latestChallengeNumber: challengeNumber - 1n, winningKeyCount: true, claimed: false }, operatorState.passedInOwnersAndPools));
             _refereeConfig = refereeConfig;
             bulkOwnersAndPools = await loadOperatorWalletsFromGraph(operatorState.operatorAddress, { wallets, pools }, challengeNumber - 1n);
 

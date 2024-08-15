@@ -92,7 +92,7 @@ contract RefereeCalculations is Initializable, AccessControlUpgradeable {
         uint256 seed = uint256(seedHash);
 
         // First, we calculate the expected number of winning keys based on the (key count) and boost factor (probability).
-        uint256 expectedWinningKeys = (_keyCount * probability) / 10_000;
+        uint256 expectedWinningKeys = (_keyCount * probability) / 1_000_000;
 
         if (expectedWinningKeys == 0) {
             // We use a large number (1,000,000) to help us calculate very small probabilities accurately.
@@ -100,7 +100,7 @@ contract RefereeCalculations is Initializable, AccessControlUpgradeable {
 
             // We scale the probability by multiplying it with scaleFactor and then dividing by 10,000.
             // This helps in handling small decimal values accurately without losing precision.
-            uint256 scaledProbability = (probability * scaleFactor) / 10_000;
+            uint256 scaledProbability = (probability * scaleFactor) / 1_000_000;
 
             // We calculate the expected number of winning keys, but we scale it up by multiplying with scaledProbability.
             // This scaling helps in better accuracy while dealing with very small probabilities.
@@ -169,23 +169,11 @@ contract RefereeCalculations is Initializable, AccessControlUpgradeable {
          */
 
         // We then add some variability.
-        // The variability is based on the boost factor, with lower boost factors having higher variability.
-        uint256 baseVariability = 30 + (1000 / _boostFactor);
+        uint256 maxAdjustmentPercentage = 30;
 
         /**
          * Explanation:
-         * - `baseVariability` is calculated by adding 30 to the result of 1000 divided by the boost factor.
-         * - This means that players with a lower boost factor will have higher variability in their rewards.
-         * - This helps to balance the game by giving more variability to players with lower bonuses.
-         */
-
-        uint256 maxAdjustmentPercentage = baseVariability > 30
-            ? 30
-            : baseVariability;
-
-        /**
-         * Explanation:
-         * - `maxAdjustmentPercentage` is set to the lesser of `baseVariability` or 30.
+         * - `maxAdjustmentPercentage` is set to 30.
          * - This means that the maximum adjustment to the rewards will be capped at 30%.
          * - Capping the adjustment percentage ensures that the rewards do not fluctuate too wildly, keeping things balanced and fair.
          */

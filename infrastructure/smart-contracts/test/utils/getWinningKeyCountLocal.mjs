@@ -16,11 +16,11 @@ export function getWinningKeyCountLocal(keyCount, boostFactor, bulkAddress, chal
     );
     const seed = BigInt(seedHash);
 
-    const expectedWinningKeys = Math.floor((keyCount * probability) / 10000);
+    const expectedWinningKeys = Math.floor((keyCount * probability) / 1_000_000);
 
     if (expectedWinningKeys === 0) {
-        const scaleFactor = 1000000;
-        const scaledProbability = Math.floor((probability * scaleFactor) / 10000);
+        const scaleFactor = 1_000_000;
+        const scaledProbability = Math.floor((probability * scaleFactor) / 1_000_000);
         const scaledExpectedWinningKeys = BigInt(keyCount) * BigInt(scaledProbability);
 
         const randomThreshold = generateRandomNumber(seed, "threshold") % BigInt(scaleFactor);
@@ -43,8 +43,7 @@ export function getWinningKeyCountLocal(keyCount, boostFactor, bulkAddress, chal
         }
     }
 
-    const baseVariability = 30 + Math.floor(1000 / boostFactor);
-    const maxAdjustmentPercentage = Math.min(baseVariability, 50);
+    const maxAdjustmentPercentage = 30;
 
     const randomFactor1 = generateRandomNumber(seed, "factor1") % BigInt(1000);
     const randomFactor2 = generateRandomNumber(seed, "factor2") % BigInt(2);

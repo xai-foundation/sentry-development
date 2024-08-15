@@ -10,20 +10,21 @@ import { config } from "../config.js";
  */
 export async function getSentryWalletsForOperator(
   operator: string,
+  submissionsFilter?: { winningKeyCount?: boolean, claimed?: boolean, latestChallengeNumber?: bigint },
   whitelist?: string[],
-  submissionsFilter?: { winningKeyCount?: boolean, claimed?: boolean, latestChallengeNumber?: bigint }
 ): Promise<{ wallets: SentryWallet[], pools: PoolInfo[], refereeConfig: RefereeConfig }> {
 
   const client = new GraphQLClient(config.subgraphEndpoint);
 
-  let submissionQuery = ``;
-  let submissionQueryWallets = ``;
+  let submissionQueryFilter: string[] = [];
   if (submissionsFilter) {
-
-    let submissionQueryFilter: string[] = [];
     const { winningKeyCount, claimed, latestChallengeNumber } = submissionsFilter;
     if (winningKeyCount != undefined) {
-      submissionQueryFilter.push(`winningKeyCount_gt: 0`)
+      if (winningKeyCount) {
+        submissionQueryFilter.push('winningKeyCount_gt: 0');
+      } else {
+        submissionQueryFilter.push('winningKeyCount: 0');
+      }
     }
     if (claimed != undefined) {
       submissionQueryFilter.push(`claimed: ${claimed}`)
@@ -31,22 +32,20 @@ export async function getSentryWalletsForOperator(
     if (latestChallengeNumber != undefined) {
       submissionQueryFilter.push(`challengeId_gte: ${latestChallengeNumber.toString()}`)
     }
-
-    submissionQuery = gql`
-        submissions(first: 10000, orderBy: challengeId, orderDirection: desc, where: {${submissionQueryFilter.join(",")}}) { 
-          challengeId
-          winningKeyCount
-          claimed 
-        }
-      `
-    submissionQueryWallets = gql`
-        bulkSubmissions(first: 10000, orderBy: challengeId, orderDirection: desc, where: {${submissionQueryFilter.join(",")}}) { 
-          challengeId
-          winningKeyCount
-          claimed 
-        }
-      `
   }
+
+  const bulkSubmissionsFields = `bulkSubmissions(first: 10000, orderBy: challengeId, orderDirection: desc, where: {${submissionQueryFilter.join(",")}}) {
+    challengeId
+    winningKeyCount
+    claimed 
+  }`
+
+  //NOTE: needed because of inconsistent field names
+  const submissionsFields = `submissions(first: 10000, orderBy: challengeId, orderDirection: desc, where: {${submissionQueryFilter.join(",")}}) {
+    challengeId
+    winningKeyCount
+    claimed 
+  }`
 
   const query = gql`
     query OperatorAddresses {
@@ -61,7 +60,7 @@ export async function getSentryWalletsForOperator(
         v1EsXaiStakeAmount
         stakedKeyCount
         keyCount
-        ${submissionQueryWallets}
+        ${submissionQueryFilter.length ? bulkSubmissionsFields : ""}
       }
       poolInfos(first: 1000, where: {or: [{owner: "${operator.toLowerCase()}"}, {delegateAddress: "${operator.toLowerCase()}"}]}) {
         address
@@ -70,7 +69,7 @@ export async function getSentryWalletsForOperator(
         totalStakedEsXaiAmount
         totalStakedKeyAmount
         metadata
-        ${submissionQuery}
+        ${submissionQueryFilter.length ? submissionsFields : ""}
       }
       refereeConfig(id: "RefereeConfig") {
         maxKeysPerPool
@@ -81,7 +80,7 @@ export async function getSentryWalletsForOperator(
       }
     }
   `
-
+  
   const result = await client.request(query) as any;
 
   let wallets: SentryWallet[] = result.sentryWallets;
