@@ -49,10 +49,10 @@ async function main() {
   // await upgrades.upgradeProxy(config.refereeAddress, referee2, { call: { fn: "initialize", args: [] } });
   // console.log("Upgraded referee2");
 
-  const tinyKeysAirdrop = await ethers.getContractFactory("contracts/drops/TinyKeysAirdrop.sol:TinyKeysAirdrop");
-  console.log("Got factory tinyKeysAirdrop");
-  await upgrades.upgradeProxy(config.tinyKeysAirdrop, tinyKeysAirdrop);
-  console.log("Upgraded tinyKeysAirdrop");
+  // const tinyKeysAirdrop = await ethers.getContractFactory("contracts/drops/TinyKeysAirdrop.sol:TinyKeysAirdrop");
+  // console.log("Got factory tinyKeysAirdrop");
+  // await upgrades.upgradeProxy(config.tinyKeysAirdrop, tinyKeysAirdrop);
+  // console.log("Upgraded tinyKeysAirdrop");
 
   // const refereeCalculations = await ethers.getContractFactory("contracts/RefereeCalculations.sol:RefereeCalculations");
   // console.log("Got factory refereeCalculations");
@@ -78,10 +78,10 @@ async function main() {
   // await upgrades.upgradeProxy(config.nodeLicenseAddress, referee6);
   // console.log("Upgraded nodeLicenseAddress");
 
-  // const referee6 = await ethers.getContractFactory("contracts/staking-v2/PoolFactory9.sol:PoolFactory9");
-  // console.log("Got factory");
-  // await upgrades.upgradeProxy(config.poolFactory, referee6, { call: { fn: "initialize", args: [] } });
-  // console.log("Upgraded referee4");
+  const referee6 = await ethers.getContractFactory("contracts/upgrades/pool-factory/PoolFactory10.sol:PoolFactory10");
+  console.log("Got factory");
+  await upgrades.upgradeProxy(config.poolFactory, referee6);
+  console.log("Upgraded referee4");
 
 
   // await run("verify:verify", {
@@ -101,9 +101,9 @@ async function main() {
   //   contract: "contracts/upgrades/referee/Referee16.sol:Referee16"
   // });
   await run("verify:verify", {
-    address: config.tinyKeysAirdrop,
+    address: config.poolFactory,
     constructorArguments: [],
-    contract: "contracts/drops/TinyKeysAirdrop.sol:TinyKeysAirdrop"
+    contract: "contracts/upgrades/pool-factory/PoolFactory10.sol:PoolFactory10"
   });
   // await run("verify:verify", {
   //   address: config.refereeCalculations,
