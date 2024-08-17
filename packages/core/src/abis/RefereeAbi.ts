@@ -1119,6 +1119,19 @@ export const RefereeAbi = [
       "type": "function"
   },
   {
+      "inputs": [],
+      "name": "isRefereeBulkSubmission",
+      "outputs": [
+          {
+              "internalType": "bool",
+              "name": "isBeforeBulk",
+              "type": "bool"
+          }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+  },
+  {
       "inputs": [
           {
               "internalType": "address",

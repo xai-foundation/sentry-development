@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
 import {
+    bootOperatorRuntime,
     Challenge,
     getProvider,
     version
@@ -106,7 +107,7 @@ export async function operatorRuntime(
     operatorState.operatorAddress = await signer.getAddress();
     logFunction(`Fetched address of operator ${operatorState.operatorAddress}.`);
 
-    let closeChallengeListener = await bootOperatorRuntime_V1(logFunction, startFromGraph);
+    let closeChallengeListener = await bootOperatorRuntime(logFunction, startFromGraph);
     logFunction(`Started listener for new challenges.`);
 
     const fetchBlockNumber = async () => {

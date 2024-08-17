@@ -1,16 +1,15 @@
 import axios from "axios";
-import { BulkOwnerOrPool, PublicNodeBucketInformation } from "../index.js";
+import { checkRefereeBulkSubmissionCompatible, PublicNodeBucketInformation } from "../index.js";
 import { operatorState } from "./operatorState.js";
 import { Challenge, config, getSentryWalletsForOperator, getSubgraphHealthStatus, retry } from "../../index.js";
 import { processNewChallenge_V1 } from "./operator-v1/processNewChallenge.js";
 import { loadOperatorKeysFromGraph_V1 } from "./operator-v1/loadOperatorKeysFromGraph.js";
 import { loadOperatorKeysFromRPC_V1 } from "./operator-v1/loadOperatorKeysFromRPC.js";
 import { processClosedChallenges_V1 } from "./operator-v1/processClosedChallenges.js";
-import { loadOperatorWalletsFromGraph } from "./loadOperatorWalletsFromGraph.js";
 import { processNewChallenge } from "./processNewChallenge.js";
-import { processClosedChallenge } from "./processClosedChallenge.js";
+import { loadOperatorWalletsFromGraph } from "./loadOperatorWalletsFromGraph.js";
 import { loadOperatorWalletsFromRPC } from "./loadOperatorWalletsFromRPC.js";
-import { RefereeConfig } from "@sentry/sentry-subgraph-client";
+import { processClosedChallenge } from "./processClosedChallenge.js";
 
 /**
  * Update the status message for display in the operator desktop app key list
@@ -45,42 +44,71 @@ export async function listenForChallengesCallback(challengeNumber: bigint, chall
 
     try {
         const graphStatus = await getSubgraphHealthStatus();
-
-        let bulkOwnersAndPools: BulkOwnerOrPool[];
-        let _refereeConfig: RefereeConfig | undefined;
         if (graphStatus.healthy) {
+            // get the wallets, pools and referee config from the subgraph
+            const submissionFilter = {};
+            const { wallets, pools, refereeConfig: refereeConfigFromGraph } = await retry(() => getSentryWalletsForOperator(operatorState.operatorAddress, submissionFilter, operatorState.passedInOwnersAndPools));
 
-            const { wallets, pools, refereeConfig } = await retry(() => getSentryWalletsForOperator(operatorState.operatorAddress, { latestChallengeNumber: challengeNumber - 1n, winningKeyCount: true, claimed: false }, operatorState.passedInOwnersAndPools));
-            _refereeConfig = refereeConfig;
-            bulkOwnersAndPools = await loadOperatorWalletsFromGraph(operatorState.operatorAddress, { wallets, pools }, challengeNumber - 1n);
+            // Check if the referee has been upgraded to V2
+            const refereeIsV2 = await checkRefereeBulkSubmissionCompatible(refereeConfigFromGraph);
+
+            // If the referee is V2, we can process the new challenge using bulk submissions
+            if (refereeIsV2) {
+                const sentryWalletData = { wallets, pools }
+                const ownerWalletsAndPools = await loadOperatorWalletsFromGraph(operatorState.operatorAddress, sentryWalletData)
+
+                // process the new challenge using bulk submissions
+                await processNewChallenge(challengeNumber, challenge, ownerWalletsAndPools, refereeConfigFromGraph);
+
+            } else {
+                // If the referee has not been upgraded to V2, we need to process the new challenge using individual submissions
+                // get the keys from the subgraph
+                const { sentryWalletMap, sentryKeysMap, nodeLicenseIds, mappedPools, refereeConfig } = await loadOperatorKeysFromGraph_V1(operatorState.operatorAddress, wallets, pools, refereeConfigFromGraph, challengeNumber - 1n);
+
+                // process the new challenge using individual submissions
+                await processNewChallenge_V1(challengeNumber, challenge, nodeLicenseIds, sentryKeysMap, sentryWalletMap, mappedPools, refereeConfig);
+
+                // check the previous challenge, that should be closed now
+                if (challengeNumber > BigInt(1)) {
+                    await processClosedChallenges_V1(challengeNumber - BigInt(1), nodeLicenseIds, sentryKeysMap, sentryWalletMap);
+                }
+            }
 
         } else {
-            operatorState.cachedLogger(`Revert to RPC call instead of using subgraph. Subgraph status error: ${graphStatus.error}`)
+            // If the subgraph is not healthy, we need to process the new challenge using RPC calls
+            operatorState.cachedLogger(`Revert to RPC call instead of using subgraph. Subgraph status error: ${graphStatus.error}`);
 
-            // const { sentryKeysMap, nodeLicenseIds } = await loadOperatorKeysFromRPC_V1(operatorState.operatorAddress);
+            // Check if the referee has been upgraded to V2
+            const refereeIsV2 = await checkRefereeBulkSubmissionCompatible();
 
-            // await processNewChallenge_V1(challengeNumber, challenge, nodeLicenseIds, sentryKeysMap);
-            // // check the previous challenge, that should be closed now
-            // if (challengeNumber > BigInt(1)) {
-            //     await processClosedChallenges_V1(challengeNumber - BigInt(1), nodeLicenseIds, sentryKeysMap);
-            // }
+            // If the referee is V2, we can process the new challenge using bulk submissions
+            if (refereeIsV2) {
+                //const { refereeConfig } = await getSentryWalletsForOperator(operatorState.operatorAddress, { latestChallengeNumber: challengeNumber, winningKeyCount: true, claimed: false }, operatorState.passedInOwnersAndPools);
+                const ownerWalletsAndPools = await loadOperatorWalletsFromRPC(operatorState.operatorAddress);
 
-            bulkOwnersAndPools = await loadOperatorWalletsFromRPC(operatorState.operatorAddress);
+                // process the new challenge using bulk submissions
+                await processNewChallenge(challengeNumber, challenge, ownerWalletsAndPools);
 
+                // Claim the previous challenge, that should be closed now and available for claiming
+                await processClosedChallenge(challengeNumber - BigInt(1), ownerWalletsAndPools);                
+
+            } else {
+
+                // If the referee has not been upgraded to V2, we need to process the new challenge using individual submissions
+
+                // get the keys from the RPC
+                const { sentryKeysMap, nodeLicenseIds } = await loadOperatorKeysFromRPC_V1(operatorState.operatorAddress);
+
+                // process the new challenge using individual submissions
+                await processNewChallenge_V1(challengeNumber, challenge, nodeLicenseIds, sentryKeysMap);
+
+                // check the previous challenge, that should be closed now and available for claiming
+                if (challengeNumber > BigInt(1)) {
+                    await processClosedChallenges_V1(challengeNumber - BigInt(1), nodeLicenseIds, sentryKeysMap);
+                }
+
+            }
         }
-
-        await processNewChallenge(challengeNumber, challenge, bulkOwnersAndPools, _refereeConfig);
-
-        // const { sentryWalletMap, sentryKeysMap, nodeLicenseIds, mappedPools, refereeConfig } =
-        //     await loadOperatorKeysFromGraph_V1(operatorState.operatorAddress, challengeNumber - 1n);
-
-        // await processNewChallenge_V1(challengeNumber, challenge, nodeLicenseIds, sentryKeysMap, sentryWalletMap, mappedPools, refereeConfig);
-        // check the previous challenge, that should be closed now
-        if (challengeNumber > BigInt(1)) {
-            // await processClosedChallenges_V1(challengeNumber - BigInt(1), nodeLicenseIds, sentryKeysMap, sentryWalletMap);
-            await processClosedChallenge(challengeNumber - BigInt(1), bulkOwnersAndPools);
-        }
-
     } catch (error: any) {
         operatorState.cachedLogger(`Error processing new challenge in listener callback: - ${error && error.message ? error.message : error}`);
     }
