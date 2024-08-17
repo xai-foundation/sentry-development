@@ -167,12 +167,14 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
     // Mapping to store all of the bulk submissions
     mapping(uint256 => mapping(address => BulkSubmission)) public bulkSubmissions;
 
+    bool public isBeforeBulkState;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[487] private __gap;
+    uint256[486] private __gap;
 
     // Struct for the submissions
     struct Submission {
@@ -243,7 +245,7 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
     event NewBulkSubmission(uint256 indexed challengeId, address indexed bulkAddress, uint256 stakedKeys, uint256 winningKeys);
     event UpdateBulkSubmission(uint256 indexed challengeId, address indexed bulkAddress, uint256 stakedKeys, uint256 winningKeys, uint256 increase, uint256 decrease);
 
-    function initialize() public reinitializer(19) {
+    function initialize() public reinitializer(20) {
 
         maxStakeAmountPerLicense = 200 * 10 ** 18;
         maxKeysPerPool = 100_000;
@@ -253,6 +255,8 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
         stakeAmountBoostFactors[1] = 200; // 0.02
         stakeAmountBoostFactors[2] = 300; // 0.03
         stakeAmountBoostFactors[3] = 700; // 0.07
+
+        isBeforeBulkState = true;
     }
 
     modifier onlyPoolFactory() {
@@ -506,6 +510,45 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
     }
 
     /**
+     * @notice Allows users to submit multiple assertions to a challenge for a batch of keys, or for a pool to submit for a batch of keys.
+     * @dev This function was updated to be backwards compatible with the previous implementation, but the submitPoolAssertion function
+     * @dev should be used by pools to submit for multiple keys for gas optimizations.
+     * @dev This function can only be called by the owner of a NodeLicense, Pool Owner(s) or addresses they have approved on this contract.
+     * @param _nodeLicenseIds The IDs of the NodeLicenses.
+     * @param _challengeId The ID of the challenge.
+     * @param _confirmData The confirm data of the assertion. This will change with implementation of BOLD 2
+     */
+
+	function submitMultipleAssertions(
+		uint256[] memory _nodeLicenseIds,
+		uint256 _challengeId,
+		bytes memory _confirmData
+	) public {
+        
+		require(challenges[_challengeId].openForSubmissions, "16");
+        
+        uint256 keyLength = _nodeLicenseIds.length;
+
+		if (keccak256(abi.encodePacked(_confirmData)) != keccak256(abi.encodePacked(challenges[_challengeId].assertionStateRootOrConfirmData))) {
+            // emit InvalidBatchSubmission(_challengeId, msg.sender, keyLength);
+			return;
+		}
+
+		for (uint256 i = 0; i < keyLength; i++) {
+            uint256 _nodeLicenseId = _nodeLicenseIds[i];
+            if (!submissions[_challengeId][_nodeLicenseId].submitted) {
+                
+                address licenseOwner = NodeLicense(nodeLicenseAddress).ownerOf(_nodeLicenseId);
+                address assignedPool = assignedKeyToPool[_nodeLicenseId];
+
+                if(isValidOperator(licenseOwner, assignedPool)){
+                    _submitAssertion(_nodeLicenseId, _challengeId, _confirmData, licenseOwner, assignedPool);
+                }
+            }
+		}
+	}
+
+    /**
      * @notice Submits an assertion to a challenge.
      * @dev This function can only be called by the owner of a NodeLicense or addresses they have approved on this contract.
      * @param _nodeLicenseId The ID of the NodeLicense.
@@ -521,58 +564,6 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
         submitMultipleAssertions(keyIds, _challengeId, _confirmData);
     }
 
-    /**
-     * @notice Allows users to submit multiple assertions to a challenge for a batch of keys, or for a pool to submit for a batch of keys.
-     * @dev This function was updated to be backwards compatible with the previous implementation, but the submitPoolAssertion function
-     * @dev should be used by pools to submit for multiple keys for gas optimizations.
-     * @dev This function can only be called by the owner of a NodeLicense, Pool Owner(s) or addresses they have approved on this contract.
-     * @param _nodeLicenseIds The IDs of the NodeLicenses.
-     * @param _challengeId The ID of the challenge.
-     * @param _confirmData The confirm data of the assertion. This will change with implementation of BOLD 2
-     */
-
-	function submitMultipleAssertions(
-		uint256[] memory _nodeLicenseIds,
-		uint256 _challengeId,
-		bytes memory _confirmData
-	) public {    
-        // Check the challenge is open for submissions
-		require(challenges[_challengeId].openForSubmissions, "16");
-        
-        uint256 keyLength = _nodeLicenseIds.length;
-
-        // If the submission successor hash, doesn't match the one submitted by the challenger, then end early and emit an event
-		if (keccak256(abi.encodePacked(_confirmData)) != keccak256(abi.encodePacked(challenges[_challengeId].assertionStateRootOrConfirmData))) {
-            emit InvalidBatchSubmission(_challengeId, msg.sender, msg.sender, keyLength);
-			return;
-		}
-
-        // Loop through the keys and submit for each key
-		for (uint256 i = 0; i < keyLength; i++) {
-            uint256 _nodeLicenseId = _nodeLicenseIds[i];
-
-            address licenseOwner = NodeLicense(nodeLicenseAddress).ownerOf(_nodeLicenseId);
-            address assignedPool = assignedKeyToPool[_nodeLicenseId];
-
-            // Check if the operator is the pool owner or a delegate
-            if(isValidOperator(licenseOwner, assignedPool)){
-                if(assignedPool != address(0)){
-                    // If the key is assigned to a pool
-                    // Only call _submitNewPoolAssertion if the submission does not exists so it won't throw an error and stop the submission for the other keys
-                    if(!bulkSubmissions[_challengeId][assignedPool].submitted) {
-                        submitBulkAssertion(assignedPool, _challengeId, _confirmData);
-                    }
-                }else {
-                    // Check that _nodeLicenseId hasn't already been submitted for this challenge
-                    if (!submissions[_challengeId][_nodeLicenseId].submitted) {
-                        // If the key is not assigned to a pool  
-                        _submitAssertion(_nodeLicenseId, _challengeId, _confirmData, licenseOwner, assignedPool);
-                    }
-                }
-            }
-		}
-    }
-
     function isValidOperator(address licenseOwner, address assignedPool) internal view returns (bool) {
         return licenseOwner == msg.sender ||
             isApprovedForOperator(licenseOwner, msg.sender) ||
@@ -583,8 +574,20 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
     }
       
     function _submitAssertion(uint256 _nodeLicenseId, uint256 _challengeId, bytes memory _confirmData, address licenseOwner, address assignedPool) internal {
+        
         // Support v1 (no pools) & v2 (pools)
-		uint256 stakedAmount = getMaxStakedAmount(assignedPool, licenseOwner);
+		uint256 stakedAmount = stakedAmounts[assignedPool];
+		if (assignedPool == address(0)) {
+			stakedAmount = stakedAmounts[licenseOwner];
+			uint256 ownerUnstakedAmount = NodeLicense(nodeLicenseAddress).balanceOf(licenseOwner) - assignedKeysOfUserCount[licenseOwner];
+			if (ownerUnstakedAmount * maxStakeAmountPerLicense < stakedAmount) {
+				stakedAmount = ownerUnstakedAmount * maxStakeAmountPerLicense;
+			}
+		} else {
+			if (assignedKeysToPoolCount[assignedPool] * maxStakeAmountPerLicense < stakedAmount) {
+				stakedAmount = assignedKeysToPoolCount[assignedPool] * maxStakeAmountPerLicense;
+			}
+		}
 
         // Check the user is actually eligible for receiving a reward, do not count them in numberOfEligibleClaimers if they are not able to receive a reward
         (bool hashEligible, ) = RefereeCalculations(refereeCalculationsAddress).createAssertionHashAndCheckPayout(_nodeLicenseId, _challengeId, _getBoostFactor(stakedAmount), _confirmData, challenges[_challengeId].challengerSignedHash);
@@ -1150,5 +1153,9 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
 				stakedAmount = assignedKeysToPoolCount[assignedPool] * maxStakeAmountPerLicense;
 			}
 		}
+    }
+
+    function isRefereeBulkSubmission() external view returns (bool isBeforeBulk) {
+        return isBeforeBulkState;
     }
 }
