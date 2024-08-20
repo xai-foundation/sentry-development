@@ -44,4 +44,10 @@ contract MockRollup {
 
         emit NodeConfirmed(nodeCounter, _blockHash, _sendRoot);
     }
+
+    function getNode(uint64 nodeNum) public view returns (Node memory) {
+        require(nodeNum <= nodeCounter, "Node does not exist");
+        return nodes[nodeNum];
+    }
+
 }
