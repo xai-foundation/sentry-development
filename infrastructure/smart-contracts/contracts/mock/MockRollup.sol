@@ -3,8 +3,8 @@
 pragma solidity ^0.8.9;
 
 /**
- * @title Mock Chainlink Price Feed
- * @notice Mock Chainlink Price Feed contract for testing purposes
+ * @title Mock Rollup Contract
+ * @notice Mock Rollup Contract for testing purposes
  */
 contract MockRollup {
     uint64 public nodeCounter;
