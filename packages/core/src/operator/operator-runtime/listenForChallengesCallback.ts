@@ -1,12 +1,6 @@
 import axios from "axios";
-import { BulkOwnerOrPool, checkRefereeBulkSubmissionCompatible, loadOperatorKeysFromGraph_V1, loadOperatorKeysFromRPC_V1, processClosedChallenges_V1, processNewChallenge_V1, PublicNodeBucketInformation } from "../index.js";
-import { operatorState } from "./operatorState.js";
+import { checkRefereeBulkSubmissionCompatible, loadOperatorKeysFromGraph_V1, loadOperatorKeysFromRPC_V1, loadOperatorWalletsFromGraph, loadOperatorWalletsFromRPC, operatorState, processClosedChallenge, processClosedChallenges_V1, processNewChallenge, processNewChallenge_V1, PublicNodeBucketInformation } from "../index.js";
 import { Challenge, getSentryWalletsForOperator, getSubgraphHealthStatus, retry } from "../../index.js";
-import { loadOperatorWalletsFromGraph } from "./loadOperatorWalletsFromGraph.js";
-import { processNewChallenge } from "./processNewChallenge.js";
-import { processClosedChallenge } from "./processClosedChallenge.js";
-import { loadOperatorWalletsFromRPC } from "./loadOperatorWalletsFromRPC.js";
-import { RefereeConfig } from "@sentry/sentry-subgraph-client";
 
 /**
  * Update the status message for display in the operator desktop app key list
@@ -42,8 +36,6 @@ export async function listenForChallengesCallback(challengeNumber: bigint, chall
     try {
         const graphStatus = await getSubgraphHealthStatus();
 
-        let bulkOwnersAndPools: BulkOwnerOrPool[];
-        let _refereeConfig: RefereeConfig | undefined;
         if (graphStatus.healthy) {
             // get the wallets, pools and referee config from the subgraph
             const submissionFilter = {};
@@ -59,6 +51,8 @@ export async function listenForChallengesCallback(challengeNumber: bigint, chall
 
                 // process the new challenge using bulk submissions
                 await processNewChallenge(challengeNumber, challenge, ownerWalletsAndPools, refereeConfigFromGraph);
+
+                await processClosedChallenge(challengeNumber - BigInt(1), ownerWalletsAndPools);
 
             } else {
                 // If the referee has not been upgraded to V2, we need to process the new challenge using individual submissions
@@ -90,7 +84,7 @@ export async function listenForChallengesCallback(challengeNumber: bigint, chall
                 await processNewChallenge(challengeNumber, challenge, ownerWalletsAndPools);
 
                 // Claim the previous challenge, that should be closed now and available for claiming
-                await processClosedChallenge(challengeNumber - BigInt(1), ownerWalletsAndPools);                
+                await processClosedChallenge(challengeNumber - BigInt(1), ownerWalletsAndPools);
 
             } else {
 
