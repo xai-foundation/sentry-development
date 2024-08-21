@@ -6,7 +6,6 @@ import {
     version
 } from "../index.js";
 import { operatorState } from "./operator-runtime/operatorState.js";
-import { bootOperatorRuntime_V1 } from "./operator-runtime/operator-v1/bootOperatorRuntime.js";
 import { BulkSubmission } from "@sentry/sentry-subgraph-client";
 
 export enum NodeLicenseStatus {
