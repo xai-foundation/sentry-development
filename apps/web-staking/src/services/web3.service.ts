@@ -724,6 +724,7 @@ export const updateRequestClaimed = (network: NetworkKey, walletAddress: `0x${st
 
 	cachedUnstakes[requestIndex].open = false;
 	cachedUnstakes[requestIndex].completeTime = Date.now();
+
 	localStorage.setItem(storageKey, JSON.stringify(cachedUnstakes));
 }
 

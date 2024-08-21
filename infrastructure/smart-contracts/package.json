@@ -29,6 +29,7 @@
     "enable-staking-v2": "hardhat run scripts/enableStakingV2.mjs",
     "fork": "hardhat node --fork https://arb1.arbitrum.io/rpc",
     "local": "hardhat node",    
+    "deploy-forwarder": "hardhat run scripts/xai-deploy/deployForwarder.mjs",
     "test": "hardhat test --network localhost",
     "coverage": "hardhat coverage --network localhost --solcoverjs ./.solcover.cjs --temp artifacts --testfiles \"./test/**/*.mjs\"",
     "clean": "rimraf artifacts && rimraf cache",
