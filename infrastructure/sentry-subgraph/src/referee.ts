@@ -493,6 +493,7 @@ export function handleKycStatusChanged(event: KycStatusChangedEvent): void {
     sentryWallet.keyCount = BigInt.fromI32(0)
     sentryWallet.stakedKeyCount = BigInt.fromI32(0)
     sentryWallet.keyCount = BigInt.fromI32(0)
+    sentryWallet.esXaiBalance = BigInt.fromI32(0)
   }
 
   sentryWallet.isKYCApproved = event.params.isKycApproved
@@ -513,6 +514,7 @@ export function handleApproval(event: ApprovalEvent): void {
     sentryWallet.keyCount = BigInt.fromI32(0)
     sentryWallet.stakedKeyCount = BigInt.fromI32(0)
     sentryWallet.keyCount = BigInt.fromI32(0)
+    sentryWallet.esXaiBalance = BigInt.fromI32(0)
   }
 
   const addApprovedOperators = sentryWallet.approvedOperators
