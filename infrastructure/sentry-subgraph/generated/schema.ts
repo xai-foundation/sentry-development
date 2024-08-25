@@ -106,21 +106,17 @@ export class RedemptionRequest extends Entity {
     this.set("startTime", Value.fromBigInt(value));
   }
 
-  get endTime(): BigInt | null {
+  get endTime(): BigInt {
     let value = this.get("endTime");
     if (!value || value.kind == ValueKind.NULL) {
-      return null;
+      throw new Error("Cannot return null for a required field.");
     } else {
       return value.toBigInt();
     }
   }
 
-  set endTime(value: BigInt | null) {
-    if (!value) {
-      this.unset("endTime");
-    } else {
-      this.set("endTime", Value.fromBigInt(<BigInt>value));
-    }
+  set endTime(value: BigInt) {
+    this.set("endTime", Value.fromBigInt(value));
   }
 
   get duration(): BigInt {
