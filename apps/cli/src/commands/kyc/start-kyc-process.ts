@@ -1,8 +1,8 @@
 import Vorpal from "vorpal";
 import inquirer from 'inquirer';
-import inquirerAutocompletePrompt from 'inquirer-autocomplete-prompt';
+// import inquirerAutocompletePrompt from 'inquirer-autocomplete-prompt';
 
-inquirer.registerPrompt('autocomplete', inquirerAutocompletePrompt);
+// inquirer.registerPrompt('autocomplete', inquirerAutocompletePrompt);
 
 export const listOfCountries = [
 	"afghanistan",
@@ -265,36 +265,36 @@ export function startKycProcess(cli: Vorpal) {
     cli
         .command('kyc', 'Starts the KYC process for a user. The user should provide their country.')
         .action(async function (this: Vorpal.CommandInstance) {
-            const countryPrompt = [{
-                type: 'autocomplete',
-                name: 'country',
-                message: 'Enter your country:',
-                source: (_: any, input: string) => {
-                    input = input || '';
-                    return new Promise((resolve) => {
-                        const fuzzyResult = listOfCountries.filter(country => country.toLowerCase().includes(input.toLowerCase()));
-                        resolve(fuzzyResult);
-                    });
-                }
-            }];
-            const {country} = await inquirer.prompt(countryPrompt);
+            // const countryPrompt = [{
+            //     type: 'autocomplete',
+            //     name: 'country',
+            //     message: 'Enter your country:',
+            //     source: (_: any, input: string) => {
+            //         input = input || '';
+            //         return new Promise((resolve) => {
+            //             const fuzzyResult = listOfCountries.filter(country => country.toLowerCase().includes(input.toLowerCase()));
+            //             resolve(fuzzyResult);
+            //         });
+            //     }
+            // }];
+            // const {country} = await inquirer.prompt(countryPrompt);
 
-            if (country) {
-                let url = '';
-                if (
-                    country === "china" || //China
-                    country === "hong kong" || //Hong Kong
-                    country === "republic of north macedonia" || //Macedonia
-                    country === "turkey" || //Turkey
-                    country === "ukraine"   //Ukraine
-                ) {
-                    url = 'https://verify-with.blockpass.org/?clientId=xai_sentry_node__edd_60145';
-                } else {
-                    url = 'https://verify-with.blockpass.org/?clientId=xai_node_007da';
-                }
-                this.log(`Please visit the following URL to start the KYC process: ${url}`);
-            } else {
-                this.log("Invalid country. Please try again.");
-            }
+            // if (country) {
+            //     let url = '';
+            //     if (
+            //         country === "china" || //China
+            //         country === "hong kong" || //Hong Kong
+            //         country === "republic of north macedonia" || //Macedonia
+            //         country === "turkey" || //Turkey
+            //         country === "ukraine"   //Ukraine
+            //     ) {
+            //         url = 'https://verify-with.blockpass.org/?clientId=xai_sentry_node__edd_60145';
+            //     } else {
+            //         url = 'https://verify-with.blockpass.org/?clientId=xai_node_007da';
+            //     }
+            //     this.log(`Please visit the following URL to start the KYC process: ${url}`);
+            // } else {
+            //     this.log("Invalid country. Please try again.");
+            // }
         });
 }
