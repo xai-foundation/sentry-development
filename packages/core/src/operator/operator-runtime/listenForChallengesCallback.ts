@@ -60,6 +60,8 @@ export async function listenForChallengesCallback(challengeNumber: bigint, chall
                 // process the new challenge using bulk submissions
                 await processNewChallenge(challengeNumber, challenge, ownerWalletsAndPools, refereeConfigFromGraph);
 
+                await processClosedChallenge(challengeNumber - BigInt(1), ownerWalletsAndPools);
+
             } else {
                 // If the referee has not been upgraded to V2, we need to process the new challenge using individual submissions
                 // get the keys from the subgraph

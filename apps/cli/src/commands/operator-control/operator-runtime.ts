@@ -26,7 +26,7 @@ export function bootOperator(cli: Vorpal) {
             }
 
             const { signer } = getSignerFromPrivateKey(walletKey);
-            
+
             const startFromGraphPrompts: Vorpal.PromptObject = {
                 type: 'confirm',
                 name: 'startFromGraph',
@@ -103,6 +103,9 @@ export function bootOperator(cli: Vorpal) {
                         throw new Error("No owners selected. Please select at least one owner.")
                     }
                 }
+            } else if (!startFromGraph) {
+                // Make the subgraph return unhealthy on next check.
+                await getSubgraphHealthStatus();
             }
 
             stopFunction = await operatorRuntime(

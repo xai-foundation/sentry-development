@@ -17,6 +17,7 @@ export async function checkRefereeBulkSubmissionCompatible(
     // If a refereeConfig is provided, check its version
     if (refereeConfig) {
         // If the version is greater than 6, it is compatible with bulk submission
+        console.log("DEV Log checkRefereeBulkSubmissionCompatible fromGraph - tested refereeConfig.version", refereeConfig.version, "isCompatibleForBulk:", refereeConfig.version % 2 == 1);
         return refereeConfig.version % 2 == 1; //Current sepolia is 19, so downgrade will be 20 and represent the before state
     } else {
         // If the refereeConfig is not provided, we can assume the graph is not healthy
@@ -32,9 +33,10 @@ export async function checkRefereeBulkSubmissionCompatible(
         try {
             // Attempt to read the refereeCalculationsAddress, which only exists in new versions of the contract
             const calcAddress = await referee.refereeCalculationsAddress();
-            console.log("DEV Log - tested refereeCalculationsAddress", calcAddress)
+            console.log("DEV Log checkRefereeBulkSubmissionCompatible fromRPC - tested refereeCalculationsAddress", calcAddress);
             const isBefore = await referee.isRefereeBulkSubmission();
-            return isBefore;
+            console.log("DEV Log checkRefereeBulkSubmissionCompatible fromRPC - isCompatibleForBulk:", isBefore == false);
+            return isBefore == false;
         } catch (error) {
             // If an error occurs, it indicates the contract is an older version
             isCompatible = false;

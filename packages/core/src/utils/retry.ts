@@ -9,6 +9,7 @@ export async function retry<T>(process: () => Promise<T>, retries: number = 10):
     try {
         return await process();
     } catch (error) {
+        console.log("DEV LOG - retry error", error);
         if (retries === 0) {
             console.error(`There was an error retrying a mechanism ${retries} times. Please save this error for troubleshooting.`);
             throw error;
