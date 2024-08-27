@@ -96,15 +96,6 @@ export function bootOperator(cli: Vorpal) {
                 }
             }
 
-            const startFromGraphPrompts: Vorpal.PromptObject = {
-                type: 'confirm',
-                name: 'startFromGraph',
-                message: 'DEV MODE - Do you want boot the operator from the graph (will alternate between graph and RPC during runtime) ?',
-                default: true
-            };
-
-            const { startFromGraph } = await this.prompt(startFromGraphPrompts);
-
             stopFunction = await operatorRuntime(
                 signer,
                 undefined,
@@ -125,8 +116,7 @@ export function bootOperator(cli: Vorpal) {
                         `${JSON.stringify(challenge, null, 2)}\n`;
 
                     this.log(errorMessage)
-                },
-                startFromGraph
+                }
             );
 
 

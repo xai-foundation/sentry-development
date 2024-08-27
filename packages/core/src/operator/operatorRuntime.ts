@@ -72,7 +72,6 @@ export type BulkOwnerOrPool = {
  * @param {((status: NodeLicenseStatusMap) => void)} [statusCallback] - Optional function to monitor the status of the runtime.
  * @param {((log: string) => void)} [logFunction] - Optional function to log the process.
  * @param {string[]} [operatorOwners] - Optional array of addresses that should replace "owners" if passed in.
- * @param {boolean} [startFromGraph] - Optional dev param
  * @returns {Promise<() => Promise<void>>} The stop function.
  */
 export async function operatorRuntime(
@@ -80,8 +79,8 @@ export async function operatorRuntime(
     statusCallback: (status: NodeLicenseStatusMap) => void = (_) => { },
     logFunction: (log: string) => void = (_) => { },
     operatorOwners?: string[],
-    onAssertionMissMatch: (publicNodeData: PublicNodeBucketInformation | undefined, challenge: Challenge, message: string) => void = (_) => { },
-    startFromGraph: boolean = true
+    onAssertionMissMatch: (publicNodeData: PublicNodeBucketInformation | undefined, challenge: Challenge, message: string) => void = (_) => { }
+
 ): Promise<() => Promise<void>> {
 
     operatorState.cachedLogger = logFunction;
