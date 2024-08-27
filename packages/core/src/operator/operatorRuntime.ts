@@ -1,12 +1,12 @@
 import { ethers } from "ethers";
 import {
+    bootOperatorRuntime,
     Challenge,
     getProvider,
     version
 } from "../index.js";
 import { operatorState } from "./operator-runtime/operatorState.js";
 import { BulkSubmission } from "@sentry/sentry-subgraph-client";
-import { bootOperatorRuntime } from "./operator-runtime/bootOperatorRuntime.js";
 
 export enum NodeLicenseStatus {
     WAITING_IN_QUEUE = "Booting Operator For Key", // waiting to do an action, but in a queue
@@ -72,6 +72,7 @@ export type BulkOwnerOrPool = {
  * @param {((status: NodeLicenseStatusMap) => void)} [statusCallback] - Optional function to monitor the status of the runtime.
  * @param {((log: string) => void)} [logFunction] - Optional function to log the process.
  * @param {string[]} [operatorOwners] - Optional array of addresses that should replace "owners" if passed in.
+ * @param {boolean} [startFromGraph] - Optional dev param
  * @returns {Promise<() => Promise<void>>} The stop function.
  */
 export async function operatorRuntime(
@@ -79,8 +80,8 @@ export async function operatorRuntime(
     statusCallback: (status: NodeLicenseStatusMap) => void = (_) => { },
     logFunction: (log: string) => void = (_) => { },
     operatorOwners?: string[],
-    onAssertionMissMatch: (publicNodeData: PublicNodeBucketInformation | undefined, challenge: Challenge, message: string) => void = (_) => { }
-
+    onAssertionMissMatch: (publicNodeData: PublicNodeBucketInformation | undefined, challenge: Challenge, message: string) => void = (_) => { },
+    startFromGraph: boolean = true
 ): Promise<() => Promise<void>> {
 
     operatorState.cachedLogger = logFunction;
@@ -105,7 +106,7 @@ export async function operatorRuntime(
     operatorState.operatorAddress = await signer.getAddress();
     logFunction(`Fetched address of operator ${operatorState.operatorAddress}.`);
 
-    let closeChallengeListener = await bootOperatorRuntime(logFunction);
+    let closeChallengeListener = await bootOperatorRuntime(logFunction, startFromGraph);
     logFunction(`Started listener for new challenges.`);
 
     const fetchBlockNumber = async () => {

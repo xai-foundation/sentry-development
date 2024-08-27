@@ -24,13 +24,13 @@ import { processPastChallenges } from "./processPastChallenges.js";
  * Startup the operatorRuntime challenger listener as well as process previous challenges
  */
 export const bootOperatorRuntime = async (
-    logFunction: (log: string) => void
+    logFunction: (log: string) => void,
+    startFromGraph: boolean
 ): Promise<() => void> => {
     let closeChallengeListener: () => void;
     logFunction(`Started listener for new challenges.`);
 
-    const graphStatus = await getSubgraphHealthStatus();
-    if (graphStatus.healthy) {
+    if (startFromGraph && (await getSubgraphHealthStatus())) {
         closeChallengeListener = listenForChallenges(listenForChallengesCallback)
 
         const openChallenge = await retry(() => getLatestChallengeFromGraph());

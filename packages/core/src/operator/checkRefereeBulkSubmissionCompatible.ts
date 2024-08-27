@@ -17,9 +17,10 @@ export async function checkRefereeBulkSubmissionCompatible(
     // If a refereeConfig is provided, check its version
     if (refereeConfig) {
         // If the version is greater than 6, it is compatible with bulk submission
-        if (refereeConfig.version > 6) {
-            return true;
-        }
+        console.log("---------------------------------------------------------------------------------------");
+        console.log("DEV Log checkRefereeBulkSubmissionCompatible fromGraph - tested refereeConfig.version", refereeConfig.version, "isCompatibleForBulk:", refereeConfig.version % 2 == 1);
+        console.log("---------------------------------------------------------------------------------------");
+        return refereeConfig.version % 2 == 1; //Current sepolia is 19, so downgrade will be 20 and represent the before state
     } else {
         // If the refereeConfig is not provided, we can assume the graph is not healthy
         // Check the contract using the RPC to determine if it is compatible
@@ -33,7 +34,13 @@ export async function checkRefereeBulkSubmissionCompatible(
         // Try to access a new storage variable in the referee contract to determine its version
         try {
             // Attempt to read the refereeCalculationsAddress, which only exists in new versions of the contract
-            await referee.refereeCalculationsAddress();
+            console.log("---------------------------------------------------------------------------------------");
+            const calcAddress = await referee.refereeCalculationsAddress();
+            console.log("DEV Log checkRefereeBulkSubmissionCompatible fromRPC - tested refereeCalculationsAddress", calcAddress);
+            const isBefore = await referee.isRefereeBulkSubmission();
+            console.log("DEV Log checkRefereeBulkSubmissionCompatible fromRPC - isCompatibleForBulk:", isBefore == false);
+            console.log("---------------------------------------------------------------------------------------");
+            return isBefore == false;
         } catch (error) {
             // If an error occurs, it indicates the contract is an older version
             isCompatible = false;

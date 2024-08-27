@@ -27,6 +27,15 @@ export function bootOperator(cli: Vorpal) {
 
             const { signer } = getSignerFromPrivateKey(walletKey);
 
+            const startFromGraphPrompts: Vorpal.PromptObject = {
+                type: 'confirm',
+                name: 'startFromGraph',
+                message: 'DEV MODE - Do you want boot the operator from the graph (will alternate between graph and RPC during runtime) ?',
+                default: true
+            };
+
+            const { startFromGraph } = await this.prompt(startFromGraphPrompts);
+
             const whitelistPrompt: Vorpal.PromptObject = {
                 type: 'confirm',
                 name: 'useWhitelist',
@@ -43,8 +52,7 @@ export function bootOperator(cli: Vorpal) {
                 const operatorAddress = await signer.getAddress();
                 const choices: Array<{ name: string, value: string }> = [];
 
-                const graphStatus = await getSubgraphHealthStatus();
-                if (graphStatus.healthy) { //fetch from subgraph
+                if (startFromGraph) { //fetch from subgraph
                     const { wallets, pools } = await getSentryWalletsForOperator(operatorAddress);
                     wallets.forEach(w => {
                         choices.push({
@@ -59,6 +67,7 @@ export function bootOperator(cli: Vorpal) {
                         })
                     })
                 } else { //fetch from RPC
+                    await getSubgraphHealthStatus();
                     const res = await loadOperatorWalletsFromRPC(operatorAddress);
                     res.forEach(a => {
                         if (a.isPool) {
@@ -94,6 +103,9 @@ export function bootOperator(cli: Vorpal) {
                         throw new Error("No owners selected. Please select at least one owner.")
                     }
                 }
+            } else if (!startFromGraph) {
+                // Make the subgraph return unhealthy on next check.
+                await getSubgraphHealthStatus();
             }
 
             stopFunction = await operatorRuntime(
@@ -116,7 +128,8 @@ export function bootOperator(cli: Vorpal) {
                         `${JSON.stringify(challenge, null, 2)}\n`;
 
                     this.log(errorMessage)
-                }
+                },
+                startFromGraph
             );
 
 
