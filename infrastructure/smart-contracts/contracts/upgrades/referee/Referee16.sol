@@ -5,12 +5,47 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "../../nitro-contracts/rollup/IRollupCore.sol";
+// import "../../nitro-contracts/rollup/IRollupCore.sol";
 import "../../NodeLicense.sol";
 import "../../Xai.sol";
 import "../../esXai.sol";
 import "../pool-factory/PoolFactory10.sol";
 import "../../RefereeCalculations.sol";
+
+
+interface IRollupCore {
+
+    struct Node {
+        // Hash of the state of the chain as of this node
+        bytes32 stateHash;
+        // Hash of the data that can be challenged
+        bytes32 challengeHash;
+        // Hash of the data that will be committed if this node is confirmed
+        bytes32 confirmData;
+        // Index of the node previous to this one
+        uint64 prevNum;
+        // Deadline at which this node can be confirmed
+        uint64 deadlineBlock;
+        // Deadline at which a child of this node can be confirmed
+        uint64 noChildConfirmedBeforeBlock;
+        // Number of stakers staked on this node. This includes real stakers and zombies
+        uint64 stakerCount;
+        // Number of stakers staked on a child node. This includes real stakers and zombies
+        uint64 childStakerCount;
+        // This value starts at zero and is set to a value when the first child is created. After that it is constant until the node is destroyed or the owner destroys pending nodes
+        uint64 firstChildBlock;
+        // The number of the latest child of this node to be created
+        uint64 latestChildNumber;
+        // The block number when this node was created
+        uint64 createdAtBlock;
+        // A hash of all the data needed to determine this node's validity, to protect against reorgs
+        bytes32 nodeHash;
+    }
+    /**
+     * @notice Get the Node for the given index.
+     */
+    function getNode(uint64 nodeNum) external view returns (Node memory);
+}
 
 // Error Codes
 // 1: Only PoolFactory can call this function.
@@ -245,18 +280,8 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
     event NewBulkSubmission(uint256 indexed challengeId, address indexed bulkAddress, uint256 stakedKeys, uint256 winningKeys);
     event UpdateBulkSubmission(uint256 indexed challengeId, address indexed bulkAddress, uint256 stakedKeys, uint256 winningKeys, uint256 increase, uint256 decrease);
 
-    function initialize() public reinitializer(20) {
-
-        maxStakeAmountPerLicense = 200 * 10 ** 18;
-        maxKeysPerPool = 100_000;
-
-        // Updated base chance to 0.01
-        stakeAmountBoostFactors[0] = 150; // 0.015
-        stakeAmountBoostFactors[1] = 200; // 0.02
-        stakeAmountBoostFactors[2] = 300; // 0.03
-        stakeAmountBoostFactors[3] = 700; // 0.07
-
-        isBeforeBulkState = true;
+    function initialize(uint8 version) public reinitializer(version) {
+        isBeforeBulkState = !isBeforeBulkState;
     }
 
     modifier onlyPoolFactory() {
@@ -443,15 +468,15 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
         rollupAssertionTracker[comboHash] = true;
 
         // verify the data inside the hash matched the data pulled from the rollup contract
-        if (isCheckingAssertions) {
+        // if (isCheckingAssertions) {
 
-            // get the node information from the rollup.
-            Node memory node = IRollupCore(rollupAddress).getNode(_assertionId);
+        //     // get the node information from the rollup.
+        //     Node memory node = IRollupCore(rollupAddress).getNode(_assertionId);
 
-            require(node.prevNum == _predecessorAssertionId, "10");
-            require(node.confirmData == _confirmData, "11");
-            require(node.createdAtBlock == _assertionTimestamp, "12");
-        }
+        //     require(node.prevNum == _predecessorAssertionId, "10");
+        //     require(node.confirmData == _confirmData, "11");
+        //     require(node.createdAtBlock == _assertionTimestamp, "12");
+        // }
         
         // we need to determine how much token will be emitted
         (uint256 challengeEmission,) = calculateChallengeEmissionAndTier();
@@ -1156,6 +1181,7 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
     }
 
     function isRefereeBulkSubmission() external view returns (bool isBeforeBulk) {
-        return isBeforeBulkState;
+        isBeforeBulk = isBeforeBulkState;
+        return isBeforeBulk;
     }
 }

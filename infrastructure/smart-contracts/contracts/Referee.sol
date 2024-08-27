@@ -6,10 +6,45 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgrad
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "./nitro-contracts/rollup/IRollupCore.sol";
+// import "./nitro-contracts/rollup/IRollupCore.sol";
 import "./NodeLicense.sol";
 import "./Xai.sol";
 import "./esXai.sol";
+
+interface IRollupCore {
+
+    struct Node {
+        // Hash of the state of the chain as of this node
+        bytes32 stateHash;
+        // Hash of the data that can be challenged
+        bytes32 challengeHash;
+        // Hash of the data that will be committed if this node is confirmed
+        bytes32 confirmData;
+        // Index of the node previous to this one
+        uint64 prevNum;
+        // Deadline at which this node can be confirmed
+        uint64 deadlineBlock;
+        // Deadline at which a child of this node can be confirmed
+        uint64 noChildConfirmedBeforeBlock;
+        // Number of stakers staked on this node. This includes real stakers and zombies
+        uint64 stakerCount;
+        // Number of stakers staked on a child node. This includes real stakers and zombies
+        uint64 childStakerCount;
+        // This value starts at zero and is set to a value when the first child is created. After that it is constant until the node is destroyed or the owner destroys pending nodes
+        uint64 firstChildBlock;
+        // The number of the latest child of this node to be created
+        uint64 latestChildNumber;
+        // The block number when this node was created
+        uint64 createdAtBlock;
+        // A hash of all the data needed to determine this node's validity, to protect against reorgs
+        bytes32 nodeHash;
+    }
+    /**
+     * @notice Get the Node for the given index.
+     */
+    function getNode(uint64 nodeNum) external view returns (Node memory);
+}
+
 
 contract Referee is Initializable, AccessControlEnumerableUpgradeable {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
@@ -351,7 +386,7 @@ contract Referee is Initializable, AccessControlEnumerableUpgradeable {
         if (isCheckingAssertions) {
 
             // get the node information from the rollup.
-            Node memory node = IRollupCore(rollupAddress).getNode(_assertionId);
+            IRollupCore.Node memory node = IRollupCore(rollupAddress).getNode(_assertionId);
 
             require(node.prevNum == _predecessorAssertionId, "The _predecessorAssertionId is incorrect.");
             require(node.confirmData == _confirmData, "The _confirmData is incorrect.");

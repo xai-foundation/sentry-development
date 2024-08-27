@@ -44,10 +44,10 @@ async function main() {
   // console.log(`Granted minter role to ${refereeAddress} on Xai`);
 
   // //UDPATE TO VERSION 4
-  // const referee2 = await ethers.getContractFactory("contracts/upgrades/referee/Referee16.sol:Referee16");
-  // console.log("Got factory referee2");
-  // await upgrades.upgradeProxy(config.refereeAddress, referee2, { call: { fn: "initialize", args: [] } });
-  // console.log("Upgraded referee2");
+  const referee2 = await ethers.getContractFactory("contracts/upgrades/referee/Referee16.sol:Referee16");
+  console.log("Got factory referee2");
+  await upgrades.upgradeProxy(config.refereeAddress, referee2);
+  console.log("Upgraded referee2");
 
   // const tinyKeysAirdrop = await ethers.getContractFactory("contracts/drops/TinyKeysAirdrop.sol:TinyKeysAirdrop");
   // console.log("Got factory tinyKeysAirdrop");
@@ -78,10 +78,10 @@ async function main() {
   // await upgrades.upgradeProxy(config.nodeLicenseAddress, referee6);
   // console.log("Upgraded nodeLicenseAddress");
 
-  const referee6 = await ethers.getContractFactory("contracts/upgrades/pool-factory/PoolFactory10.sol:PoolFactory10");
-  console.log("Got factory");
-  await upgrades.upgradeProxy(config.poolFactory, referee6);
-  console.log("Upgraded referee4");
+  // const referee6 = await ethers.getContractFactory("contracts/upgrades/pool-factory/PoolFactory10.sol:PoolFactory10");
+  // console.log("Got factory");
+  // await upgrades.upgradeProxy(config.poolFactory, referee6);
+  // console.log("Upgraded referee4");
 
 
   // await run("verify:verify", {
@@ -95,16 +95,16 @@ async function main() {
   //   // contract: "contracts/upgrades/referee/Referee15.sol:Referee15"
   //   contract: "contracts/drops/TinyKeysAirdrop2.sol:TinyKeysAirdrop2"
   // });
-  // await run("verify:verify", {
-  //   address: config.refereeAddress,
-  //   constructorArguments: [],
-  //   contract: "contracts/upgrades/referee/Referee16.sol:Referee16"
-  // });
   await run("verify:verify", {
-    address: config.poolFactory,
+    address: config.refereeAddress,
     constructorArguments: [],
-    contract: "contracts/upgrades/pool-factory/PoolFactory10.sol:PoolFactory10"
+    contract: "contracts/upgrades/referee/Referee16.sol:Referee16"
   });
+  // await run("verify:verify", {
+  //   address: config.poolFactory,
+  //   constructorArguments: [],
+  //   contract: "contracts/upgrades/pool-factory/PoolFactory10.sol:PoolFactory10"
+  // });
   // await run("verify:verify", {
   //   address: config.refereeCalculations,
   //   constructorArguments: [],
