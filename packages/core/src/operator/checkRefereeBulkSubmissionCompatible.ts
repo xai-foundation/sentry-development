@@ -42,6 +42,7 @@ export async function checkRefereeBulkSubmissionCompatible(
             console.log("---------------------------------------------------------------------------------------");
             return isBefore == false;
         } catch (error) {
+            console.log("DEV Log checkRefereeBulkSubmissionCompatible fromRPC has error - isCompatibleForBulk:", false, error);
             // If an error occurs, it indicates the contract is an older version
             isCompatible = false;
         }
