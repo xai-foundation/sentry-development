@@ -6,7 +6,7 @@ import {
     VoucherIssued as VoucherIssuedEvent,
     Transfer as esXaiTransferEvent
 } from "../generated/esXai/esXai";
-import { RedemptionRequest } from "../generated/schema";
+import { RedemptionRequest, SentryWallet } from "../generated/schema";
 import { esXai } from "../generated/esXai/esXai";
 
 export function handleRedemptionStarted(event: RedemptionStartedEvent): void {
@@ -22,21 +22,29 @@ export function handleRedemptionStarted(event: RedemptionStartedEvent): void {
     const contract = esXai.bind(event.address);
     
     // Get the redemption amount and duration from the contract
-    const redemptionRequestResult  = contract.getRedemptionRequest(user, index);
+    const redemptionRequestResult  = contract.try_getRedemptionRequest(user, index);
 
-    if (!redemptionRequestResult.amount) {
+    // Check if the call was successful
+    if (redemptionRequestResult.reverted) {
+        log.error("Failed to get redemption request on handleRedemptionStarted: TX: {}", [event.transaction.hash.toHexString()]);
+        return;
+
+    }
+    const redemptionRequest = redemptionRequestResult.value;
+
+    if (!redemptionRequest.amount) {
         log.error("Failed to get redemption request amount on handleRedemptionStarted: TX: {}", [event.transaction.hash.toHexString()]);
         return;
     }   
 
-    if (!redemptionRequestResult.duration) {
+    if (!redemptionRequest.duration) {
         log.error("Failed to get redemption request duration on handleRedemptionStarted: TX: {}", [event.transaction.hash.toHexString()]);
         return;
     }
 
 
-    request.amount = redemptionRequestResult.amount;
-    request.duration = redemptionRequestResult.duration;
+    request.amount = redemptionRequest.amount;
+    request.duration = redemptionRequest.duration;
     request.sentryWallet = event.params.user.toHexString();
     request.index = event.params.index;
     request.startTime = event.block.timestamp;
