@@ -96,11 +96,6 @@ export function handleAssertionSubmitted(event: AssertionSubmittedEvent): void {
     log.warning("Failed to find refereeConfig handleAssertionSubmitted TX: " + event.transaction.hash.toHexString(), [])
     return;
   }
-  if (refereeConfig.version.gt(BigInt.fromI32(9))) {
-    // Event replaced in newer versions of the Referee for simpler event handlers
-    return;
-  }
-
 
   const challenge = Challenge.load(event.params.challengeId.toString())
   if (!challenge) {
@@ -271,11 +266,7 @@ export function handleRewardsClaimed(event: RewardsClaimedEvent): void {
     log.warning("Failed to find refereeConfig handleRewardsClaimed TX: " + event.transaction.hash.toHexString(), [])
     return;
   }
-  if (refereeConfig.version.gt(BigInt.fromI32(9))) {
-    // Event replaced in newer versions of the Referee for simpler event handlers
-    return;
-  }
-
+  
   // query for the challenge and update it
   const challenge = Challenge.load(event.params.challengeId.toString())
 
@@ -381,10 +372,6 @@ export function handleBatchRewardsClaimed(event: BatchRewardsClaimedEvent): void
   // If the referee config is not found, log a warning and skip the claim
   if (!refereeConfig) {
     log.warning("Failed to find refereeConfig handleBatchRewardsClaimed TX: " + event.transaction.hash.toHexString(), [])
-    return;
-  }
-  if (refereeConfig.version.gt(BigInt.fromI32(9))) {
-    // Event replaced in newer versions of the Referee for simpler event handlers
     return;
   }
 
