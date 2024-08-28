@@ -258,6 +258,11 @@ export function handleChallengeSubmitted(event: ChallengeSubmittedEvent): void {
 
 export function handleRewardsClaimed(event: RewardsClaimedEvent): void {
 
+  if (getTxSignatureFromEvent(event) == "0xb4d6b7df") {
+    //If this event was triggered from calling "claimMultipleRewards" we don't need to process as it will be handled in the batchClaim handler
+    return;
+  }
+
   // Load current referee config from the graph
   const refereeConfig = RefereeConfig.load("RefereeConfig");
 
@@ -266,7 +271,7 @@ export function handleRewardsClaimed(event: RewardsClaimedEvent): void {
     log.warning("Failed to find refereeConfig handleRewardsClaimed TX: " + event.transaction.hash.toHexString(), [])
     return;
   }
-  
+
   // query for the challenge and update it
   const challenge = Challenge.load(event.params.challengeId.toString())
 
@@ -366,6 +371,12 @@ export function handleRewardsClaimed(event: RewardsClaimedEvent): void {
 }
 
 export function handleBatchRewardsClaimed(event: BatchRewardsClaimedEvent): void {
+
+  if (getTxSignatureFromEvent(event) == "0x86bb8f37") {
+    //If this event was triggered from calling "claimReward" we don't need to process as it will be handled in the claim handler
+    return;
+  }
+
   // Load current referee config from the graph
   const refereeConfig = RefereeConfig.load("RefereeConfig");
 
@@ -654,11 +665,11 @@ export function handleBulkRewardsClaimed(event: BulkRewardsClaimedEvent): void {
       log.warning("Failed to find poolChallenges in handleBulkRewardsClaimed for challenge " + event.params.challengeId.toHexString() + " and poolAdress: " + event.params.bulkAddress.toHexString() + ", TX: " + event.transaction.hash.toHexString(), [])
       return
     }
-  
+
     poolChallenges.claimKeyCount = event.params.winningKeys;
     poolChallenges.totalClaimedEsXaiAmount = event.params.totalReward;
     poolChallenges.save()
-  
+
     challenge.amountClaimedByClaimers = challenge.amountClaimedByClaimers.plus(event.params.totalReward);
     challenge.save();
   }
