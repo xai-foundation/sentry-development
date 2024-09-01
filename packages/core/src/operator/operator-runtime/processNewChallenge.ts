@@ -29,10 +29,8 @@ export async function processNewChallenge(
     let lastSubmittedAssertion: number;
     let confirmData = challenge.assertionStateRootOrConfirmData;
 
-    const graphStatus = await getSubgraphHealthStatus();
-
     // Get the last submitted assertion Id from the subgraph or RPC
-    if(graphStatus.healthy){                
+    if(refereeConfig){                
         // TODO Implement
         // 1. Get the last submitted assertion from the subgraph
         const lastSubmittedAssertionId = 0; // TODO Get last submitted assertion from the subgraph
@@ -54,7 +52,7 @@ export async function processNewChallenge(
 
         // Use those Ids to retrieve the confirm data for each assertion
         let listOfConfirmData: string[]; //TODO Implement getting these from the subgraph
-        if(graphStatus.healthy){
+        if(refereeConfig){
             //TODO Implement
             //2. Get the confirm data for each assertion from the subgraph
             listOfConfirmData = ["0xConfirmData1", "0xConfirmData2", "0xConfirmData3"]; //TODO Get confirm data from the subgraph
