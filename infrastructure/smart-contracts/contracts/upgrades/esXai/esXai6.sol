@@ -291,45 +291,6 @@ contract esXai6 is ERC20Upgradeable, ERC20BurnableUpgradeable, AccessControlUpgr
     function setMaxKeysNonKyc(uint256 newMax) public onlyRole(DEFAULT_ADMIN_ROLE) {
         maxKeysNonKyc = newMax;
     }
-    
-    /**
-    * @notice Retrieves a list of redemption requests for a specific user, starting from the highest index.
-    * @dev This function returns an array of `RedemptionRequestExt` structs for a given user,
-    *      starting from the highest index available and returning up to the maximum quantity requested.
-    * @param account The address of the user whose redemption requests are to be fetched.
-    * @param maxQty The maximum number of redemption requests to return.
-    * @param offset The offset from the highest index from which to start fetching the redemption requests.
-    * @return redemptions An array of `RedemptionRequestExt` structs containing the user's redemption requests in descending order by index.
-    * @return totalRedemptions The total number of redemption requests for the user.
-    */
-    function getRedemptionsByUser(address account, uint256 maxQty, uint256 offset) external view returns (RedemptionRequestExt[] memory redemptions, uint256 totalRedemptions) {
-
-        totalRedemptions = _extRedemptionRequests[account].length;
-
-        // Early return if maxQty is zero or offset is out of bounds.
-        if (maxQty == 0 || offset >= totalRedemptions) {
-            redemptions = new RedemptionRequestExt[](0);
-            return (redemptions, totalRedemptions);
-        }
-
-        // Step 1: Calculate the starting index.
-        int256 startIndex = int256(totalRedemptions) - 1 - int256(offset);
-
-        // Step 2: Determine the number of redemption requests to return.
-        uint256 remainingItems = totalRedemptions - offset; // Using a local variable for readability since this will be used for offchain pagination and gas efficiency is not an issue.
-        uint256 qtyToReturn = maxQty > remainingItems ? remainingItems : maxQty;
-
-        // Step 3: Initialize the result array.
-        redemptions = new RedemptionRequestExt[](qtyToReturn);
-
-        // Step 4: Fetch redemption requests in reverse order using i--.
-        for (uint256 i = qtyToReturn; i > 0; i--) {
-            if (startIndex < 0) break;  // Avoid underflow with signed index
-            redemptions[qtyToReturn - i] = _extRedemptionRequests[account][uint256(startIndex)];
-            startIndex--;
-        }
-        return (redemptions, totalRedemptions);
-    }
 
     /**
     * @notice Returns a list of redemption requests for a given user at specified indices.
@@ -340,30 +301,38 @@ contract esXai6 is ERC20Upgradeable, ERC20BurnableUpgradeable, AccessControlUpgr
     function getRedemptionsByUserIndex(address account, uint256[] memory indices) 
         external 
         view 
-        returns (RedemptionRequestExt[] memory redemptions) 
+        returns (RedemptionRequestExt[] memory redemptions, uint256 totalRedemptions) 
     {
         // Get the total number of redemption requests for the given account
-        uint256 totalRedemptions = _extRedemptionRequests[account].length;
+        totalRedemptions = _extRedemptionRequests[account].length;
         
         // Ensure that the indices array is not empty
         require(indices.length > 0, "Invalid indices");
-        
-        // Ensure that the number of requested indices does not exceed the total number of redemptions
-        require(indices.length <= totalRedemptions, "Invalid indices");
-        
-        // Initialize the array to hold the redemption requests to be returned
-        redemptions = new RedemptionRequestExt[](indices.length);
 
+        // Initialize an array with a length equal to the maximum possible number of valid redemptions
+        redemptions = new RedemptionRequestExt[](indices.length);
+        uint256 count = 0;
+        
         // Iterate through the provided indices array
         for (uint256 i = 0; i < indices.length; i++) {
             uint256 index = indices[i];
-
-            // Ensure that each index is within the bounds of the redemption requests array
-            require(index >= 0 && index < totalRedemptions, "Index out of bounds");
             
-            // Assign the redemption request at the specified index to the output array
-            redemptions[i] = _extRedemptionRequests[account][index];
+            // Check if the index is within the bounds of the redemption requests array
+            if (index < totalRedemptions) {
+                // Retrieve the redemption request at the specified index
+                RedemptionRequestExt memory request = _extRedemptionRequests[account][index];
+                
+                // Add the valid redemption request to the redemptions array
+                redemptions[count] = request;
+                count++;
+            }
+        }
+        
+        // Resize the array to match the actual number of valid redemptions
+        assembly {
+            mstore(redemptions, count)
         }
     }
+
 
 }
