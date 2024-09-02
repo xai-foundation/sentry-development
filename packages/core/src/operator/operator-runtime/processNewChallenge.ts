@@ -47,7 +47,7 @@ export async function processNewChallenge(
 
             const winningKeyCount = getWinningKeyCount(
                 ownerOrPool.keyCount,
-                Number(boostFactor),
+                Number(boostFactor) * 100,
                 ownerOrPool.address,
                 challengeId,
                 challenge.assertionStateRootOrConfirmData,
