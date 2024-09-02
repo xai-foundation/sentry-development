@@ -51,6 +51,8 @@ import "../../staking-v2/PoolBeacon.sol";
 // 34: Invalid delegate update; pool needs to have been created via the PoolFactory
 // 35: Invalid submission; pool needs to have been created via the PoolFactory
 // 36: Invalid submission; user needs to be owner, delegate or staker to submit
+// 37: Invalid auth: msg.sender must be kyc approved to create a pool
+// 38: Address failed kyc
 
 contract PoolFactory10 is Initializable, AccessControlEnumerableUpgradeable {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
@@ -98,16 +100,30 @@ contract PoolFactory10 is Initializable, AccessControlEnumerableUpgradeable {
     // Period (in seconds) to update reward breakdown changes
     uint256 public updateRewardBreakdownDelayPeriod;
 
+    // Mapping to track if an address failed kyc
+    mapping(address => bool) public failedKyc; // Default is false
+
     // Role definition for stake keys admin
-    bytes32 public constant STAKE_KEYS_ADMIN_ROLE =
-        keccak256("STAKE_KEYS_ADMIN_ROLE");
+    bytes32 public constant STAKE_KEYS_ADMIN_ROLE = keccak256("STAKE_KEYS_ADMIN_ROLE");
+
+    // Determines if a user's total stake has been calculated
+    mapping(address => bool) public totalEsXaiStakeCalculated;
+
+    // =================> VERY IMPORTANT <============================================
+    // FUTURE DEVELOPERS: DO NOT USE THIS VARIABLE AS THE SOURCE OF TRUTH FOR TOTAL STAKE
+    // Making this variable private as it SHOULD NOT BE USED as the source of truth for total stake
+    // The getTotalesXaiStakedByUser function should be used instead
+    // This mapping will only be accurate AFTER a user has interacted with a pool
+    mapping(address => uint256) private _totalEsXaiStakeByUser;
+
+
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[496] private __gap;
+    uint256[493] private __gap;
 
     // Events for various actions within the contract
     event StakingEnabled();
@@ -224,6 +240,13 @@ contract PoolFactory10 is Initializable, AccessControlEnumerableUpgradeable {
         require(validateShareValues(_shareConfig), "3"); // Validate share configuration
         require(msg.sender != _delegateOwner, "4"); // Delegate cannot be pool creator
 
+        Referee16 referee = Referee16(refereeAddress);
+        require(referee.isKycApproved(msg.sender), "37"); // Owner must be kyc approved
+        
+        // This is redundant, but being added in case the approved kyc requirement is ever removed
+        // this would still prevent a user from creating a pool if they failed kyc
+        require(failedKyc[msg.sender] == false, "38"); // Owner must not have failed kyc
+
         (
             address poolProxy,
             address keyBucketProxy,
@@ -298,6 +321,7 @@ contract PoolFactory10 is Initializable, AccessControlEnumerableUpgradeable {
         string[] memory _poolSocials
     ) external {
         StakingPool5 stakingPool = StakingPool5(pool);
+        require(poolsCreatedViaFactory[pool], "35"); // Pool must be created via factory
         require(stakingPool.getPoolOwner() == msg.sender, "5"); // Only pool owner can update metadata
         stakingPool.updateMetadata(_poolMetadata, _poolSocials);
         emit UpdateMetadata(pool);
@@ -313,6 +337,7 @@ contract PoolFactory10 is Initializable, AccessControlEnumerableUpgradeable {
         uint32[3] memory _shareConfig
     ) external {
         StakingPool5 stakingPool = StakingPool5(pool);
+        require(poolsCreatedViaFactory[pool], "35"); // Pool must be created via factory
         require(stakingPool.getPoolOwner() == msg.sender, "6"); // Only pool owner can update shares
         require(validateShareValues(_shareConfig), "7"); // Validate share configuration
         stakingPool.updateShares(
@@ -417,6 +442,7 @@ contract PoolFactory10 is Initializable, AccessControlEnumerableUpgradeable {
         require(pool != address(0), "10"); // Invalid pool address
         require(keyIds.length > 0, "11"); // At least 1 key required
         require(poolsCreatedViaFactory[pool], "12"); // Pool must be created via factory
+        require(failedKyc[msg.sender] == false, "38"); // Owner must not have failed kyc
 
         _stakeKeys(pool, keyIds, msg.sender, false);
     }
@@ -553,6 +579,7 @@ contract PoolFactory10 is Initializable, AccessControlEnumerableUpgradeable {
      */
     function stakeEsXai(address pool, uint256 amount) external {
         require(poolsCreatedViaFactory[pool], "27"); // Pool must be created via factory
+        require(failedKyc[msg.sender] == false, "38"); // Owner must not have failed kyc
 
         Referee16(refereeAddress).stakeEsXai(pool, amount);
         esXai(esXaiAddress).transferFrom(msg.sender, address(this), amount);
@@ -560,6 +587,14 @@ contract PoolFactory10 is Initializable, AccessControlEnumerableUpgradeable {
         stakingPool.stakeEsXai(msg.sender, amount);
 
         associateUserWithPool(msg.sender, pool);
+
+        // Update total stake
+        if(!totalEsXaiStakeCalculated[msg.sender]) {
+            _totalEsXaiStakeByUser[msg.sender] = getTotalesXaiStakedByUser(msg.sender);
+            totalEsXaiStakeCalculated[msg.sender] = true;
+        } else {
+            _totalEsXaiStakeByUser[msg.sender] += amount;
+        }
 
         emit StakeEsXai(
             msg.sender,
@@ -583,13 +618,29 @@ contract PoolFactory10 is Initializable, AccessControlEnumerableUpgradeable {
     ) external {
         require(poolsCreatedViaFactory[pool], "28"); // Pool must be created via factory
 
-        esXai(esXaiAddress).transfer(msg.sender, amount);
-        Referee16(refereeAddress).unstakeEsXai(pool, amount);
         StakingPool5 stakingPool = StakingPool5(pool);
         stakingPool.unstakeEsXai(msg.sender, unstakeRequestIndex, amount);
 
         if (!stakingPool.isUserEngagedWithPool(msg.sender)) {
             removeUserFromPool(msg.sender, pool);
+        }
+
+        // Reordered to avoid reentrancy
+        Referee16(refereeAddress).unstakeEsXai(pool, amount);
+        esXai(esXaiAddress).transfer(msg.sender, amount);
+
+        // Update total stake
+        if(!totalEsXaiStakeCalculated[msg.sender]) {
+            uint256 totalPools = interactedPoolsOfUser[msg.sender].length;
+            // We check the total pools interacted with by the user to avoid running out of gas
+            // This ensures we do not run this one time calculation until we are sure that it will not run out of gas
+            // This ensures a user can always unstake their esXai
+            if(totalPools < 150) {
+                _totalEsXaiStakeByUser[msg.sender] = getTotalesXaiStakedByUser(msg.sender);
+                totalEsXaiStakeCalculated[msg.sender] = true;
+            }
+        } else {
+            _totalEsXaiStakeByUser[msg.sender] -= amount;
         }
 
         emit UnstakeEsXai(
@@ -629,6 +680,7 @@ contract PoolFactory10 is Initializable, AccessControlEnumerableUpgradeable {
 
         interactedPoolsOfUser[user][indexOfPool] = lastPool;
         userToInteractedPoolIds[user][lastPool] = indexOfPool;
+        userToInteractedPoolIds[user][pool] = 0;
 
         interactedPoolsOfUser[user].pop();
     }
@@ -785,5 +837,58 @@ contract PoolFactory10 is Initializable, AccessControlEnumerableUpgradeable {
         }
 
         return true;
+    }
+    
+    /**
+    * @notice Allows the admin to set the failed kyc status of a user
+    * @param user The address of the user
+    * @param failed Boolean indicating if the user failed kyc
+    */
+
+    function setFailedKyc(address user, bool failed) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        failedKyc[user] = failed;
+    }    
+    
+    /**
+    * @notice Retrieves the total amount of esXAI staked by a specific user across all interacted staking pools.
+    * @dev If the user's total stake has already been calculated and cached, the cached value is returned.
+    *      Otherwise, it calculates the total staked amount by iterating over all staking pools the user has interacted with.
+    * @param user The address of the user whose total staked amount is to be retrieved.
+    * @return The total amount of esXAI staked by the user across all pools.
+    */
+    function getTotalesXaiStakedByUser(address user) public view returns (uint256) {
+        if (totalEsXaiStakeCalculated[user]) {
+            return _totalEsXaiStakeByUser[user];
+        }
+
+        uint256 totalStakeAmount = 0;
+        address[] memory userPools = interactedPoolsOfUser[user];
+        for (uint256 i = 0; i < userPools.length; i++) {
+            totalStakeAmount += StakingPool5(userPools[i]).getStakedAmounts(user);
+        }
+        return totalStakeAmount;
+    }
+
+    /**
+    * @notice Calculates the total stake amount for a list of users across all pools they have interacted with.
+    * @dev Iterates over each user provided in the `users` calldata array. For each user, it checks if the total stake has already been calculated.
+    *      If not, it sums the staked amounts from all staking pools the user has interacted with and stores the result.
+    *      Uses storage for interacting pools array to optimize gas usage. Only processes users whose total stake hasn't been calculated yet.
+    * @param users An array of user addresses for which the total stake needs to be calculated.
+    */
+    function calculateUserTotalStake(address[] calldata users) external {
+        for (uint256 i = 0; i < users.length; i++) {
+            if(totalEsXaiStakeCalculated[users[i]]) {
+                continue;
+            }
+            uint256 totalStakeAmount = 0;
+            address[] storage userPools = interactedPoolsOfUser[users[i]]; // Use storage instead of memory
+            uint256 poolCount = userPools.length; // Cache length for gas optimization
+            for (uint256 j = 0; j < poolCount; j++) {
+                totalStakeAmount += StakingPool5(userPools[j]).getStakedAmounts(users[i]);
+            }
+            _totalEsXaiStakeByUser[users[i]] = totalStakeAmount;
+            totalEsXaiStakeCalculated[users[i]] = true;
+        }
     }
 }

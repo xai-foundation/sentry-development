@@ -25,6 +25,7 @@
     "deploy-wrapped-xai": "hardhat run scripts/deployWXai.mjs",
     "upgrade-referee": "hardhat run scripts/upgradeReferee.mjs",
     "upgrade-esxai": "hardhat run scripts/upgradeEsXai.mjs",
+    "upgrade-pool-factory": "hardhat run scripts/upgrade-poolfactory.mjs",
     "update-beacon-impl": "hardhat run scripts/updateBeaconImp.mjs",
     "deploy-staking-v2": "hardhat run scripts/deployStakingV2.mjs",
     "enable-staking-v2": "hardhat run scripts/enableStakingV2.mjs",
