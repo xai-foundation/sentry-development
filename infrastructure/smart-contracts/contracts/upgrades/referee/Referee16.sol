@@ -980,7 +980,7 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
             }
 
             // Determine the number of winning keys
-            winningKeyCount = getWinningKeyCount(numberOfKeys, (boostFactor * 100), _bulkAddress, _challengeId, bulkSubmissions[_challengeId][_bulkAddress].assertionStateRootOrConfirmData, challenges[_challengeId].challengerSignedHash);
+            winningKeyCount = getWinningKeyCount(numberOfKeys, boostFactor, _bulkAddress, _challengeId, bulkSubmissions[_challengeId][_bulkAddress].assertionStateRootOrConfirmData, challenges[_challengeId].challengerSignedHash);
         }
 
         // Determine the winning key count increase or decrease amounts
@@ -1096,7 +1096,7 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
             }
 
             // Determine the number of winning keys
-            winningKeyCount = getWinningKeyCount(numberOfKeys, (boostFactor * 100), _bulkAddress, _challengeId, _confirmData, challenges[_challengeId].challengerSignedHash);
+            winningKeyCount = getWinningKeyCount(numberOfKeys, boostFactor, _bulkAddress, _challengeId, _confirmData, challenges[_challengeId].challengerSignedHash);
         }
 
         // Update the challenge by adding the winning key count to the total winning keys
