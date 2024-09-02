@@ -44,10 +44,10 @@ async function main() {
   // console.log(`Granted minter role to ${refereeAddress} on Xai`);
 
   // //UDPATE TO VERSION 4
-  const referee2 = await ethers.getContractFactory("contracts/upgrades/referee/Referee16.sol:Referee16");
-  console.log("Got factory referee2");
-  await upgrades.upgradeProxy(config.refereeAddress, referee2);
-  console.log("Upgraded referee2");
+  // const referee2 = await ethers.getContractFactory("contracts/upgrades/referee/Referee16.sol:Referee16");
+  // console.log("Got factory referee2");
+  // await upgrades.upgradeProxy(config.refereeAddress, referee2);
+  // console.log("Upgraded referee2");
 
   // const tinyKeysAirdrop = await ethers.getContractFactory("contracts/drops/TinyKeysAirdrop.sol:TinyKeysAirdrop");
   // console.log("Got factory tinyKeysAirdrop");

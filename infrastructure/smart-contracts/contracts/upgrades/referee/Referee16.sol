@@ -549,7 +549,7 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
 		uint256 _challengeId,
 		bytes memory _confirmData
 	) public {
-        
+		require(isBeforeBulkState, "_dev01_");
 		require(challenges[_challengeId].openForSubmissions, "16");
         
         uint256 keyLength = _nodeLicenseIds.length;
@@ -1051,6 +1051,7 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
     * @param _confirmData The confirm data of the assertion.
     */
     function submitBulkAssertion(address _bulkAddress, uint256 _challengeId, bytes memory _confirmData) public {
+		require(isBeforeBulkState == false, "_dev02_");
         // Confirm the challenge is open for submissions
 		require(challenges[_challengeId].openForSubmissions, "16");
 
