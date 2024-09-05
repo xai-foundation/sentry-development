@@ -13,8 +13,19 @@ import { WarningIcon } from "@sentry/ui/src/rebrand/icons/IconsComponents";
  * @returns {JSX.Element} The rendered ChooseQuantityRow component
  */
 export function ChooseQuantityRow(): JSX.Element {
+
+    const MAX_PER_PURCHASE = 175;
+
     // Destructure necessary values from the WebBuyKeysContext
     const { quantity, setQuantity, maxSupply } = useWebBuyKeysContext();
+
+    function calculateMaxPurchase():number {
+        if(maxSupply >= MAX_PER_PURCHASE) {
+            return MAX_PER_PURCHASE;
+        }else{
+            return maxSupply;
+        }
+    }
 
     return (
         <div>
@@ -44,23 +55,23 @@ export function ChooseQuantityRow(): JSX.Element {
                 </p>     
             </div>
             {/* Quantity input section */}
-            <div className="flex w-full justify-end flex-row items-start gap-4 sm:mt-4 lg:mt-0">
+            <div className="flex w-full justify-end flex-row items-start gap-4 sm:mt-4 lg:mt-10">
                 <div className="flex sm:w-full lg:w-[175px] sm:px-2 lg:px-0">
                     {/* Custom number input component for selecting quantity */}
                     <XaiNumberInput
                         quantity={quantity}
                         setQuantity={setQuantity}
-                        maxSupply={maxSupply}
+                        maxSupply={calculateMaxPurchase()}
                     />
                 </div>
             </div>
         </div>        
-        { quantity > 99 && <BaseCallout extraClasses={{ calloutWrapper: "md:h-[100px] h-[159px] mt-[12px]", calloutFront: "!justify-start" }} isWarning>
+        { quantity > MAX_PER_PURCHASE && <BaseCallout extraClasses={{ calloutWrapper: "md:h-[100px] h-[159px] mt-[12px]", calloutFront: "!justify-start" }} isWarning>
                     <div className="flex md:gap-[21px] gap-[10px]">
                         <span className="block mt-2"><WarningIcon /></span>
                         <div>
-                            <span className="block font-bold text-lg">175 Maximum Per Transaction</span>
-                            <span className="block font-medium text-lg">A maximum of 175 NodeLicenses can be purchased in a single transaction.</span>
+                            <span className="block font-bold text-lg">{MAX_PER_PURCHASE} Maximum Per Transaction</span>
+                            <span className="block font-medium text-lg">A maximum of {MAX_PER_PURCHASE} NodeLicenses can be purchased in a single transaction.</span>
                         </div>
                     </div>
                 </BaseCallout>}
