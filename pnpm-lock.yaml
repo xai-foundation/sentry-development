@@ -104,9 +104,6 @@ importers:
       '@types/inquirer-autocomplete-prompt':
         specifier: 3.0.3
         version: 3.0.3
-      '@types/vorpal':
-        specifier: ^1.12.2
-        version: 1.12.8
       esbuild:
         specifier: ^0.19.4
         version: 0.19.12
@@ -6053,9 +6050,6 @@ packages:
 
   '@types/verror@1.10.10':
     resolution: {integrity: sha512-l4MM0Jppn18hb9xmM6wwD1uTdShpf9Pn80aXTStnK1C94gtPvJcV2FrDmbOQUAQfJ1cKZHktkQUDwEqaAKXMMg==}
-
-  '@types/vorpal@1.12.8':
-    resolution: {integrity: sha512-Qt+Yxa1q6QCaYMxZFXlyPOF3ktIscTelNr1AFYuKM7/Dhlki4gvc476uFyA/hYvskSA6V8W+55x9FjlbAPcYdQ==}
 
   '@types/web3-provider-engine@14.0.4':
     resolution: {integrity: sha512-59wFvtceRmWXfQFoH8qtFIQZf6B7PqBwgBBmZLu4SjRK6pycnjV8K+jihbaGOFwHjTPcPFm15m+CS6I0BBm4lw==}
@@ -23674,6 +23668,10 @@ snapshots:
     dependencies:
       commander: 12.1.0
 
+  '@types/commander@2.12.2':
+    dependencies:
+      commander: 12.1.0
+
   '@types/concat-stream@1.6.1':
     dependencies:
       '@types/node': 20.14.15
@@ -23954,8 +23952,6 @@ snapshots:
 
   '@types/verror@1.10.10':
     optional: true
-
-  '@types/vorpal@1.12.8': {}
 
   '@types/web3-provider-engine@14.0.4':
     dependencies:

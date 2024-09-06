@@ -37,7 +37,6 @@ const NUM_CON_WS_ALLOWED_ERRORS: number = 10; //The number of consecutive WS err
 //@dev This has to match NUM_ASSERTION_LISTENER_RETRIES
 const ASSERTION_LISTENER_RETRY_DELAYS: [number, number, number] = [30_000, 180_000, 600_000]; //Delays for auto restart the challenger, on the first error it will wait 30 seconds, then 3 minutes then 10 minutes before trying to restart.
 
-// Prompt input cache
 let cachedSigner: {
     address: string,
     signer: ethers.Signer
@@ -189,7 +188,7 @@ const startListener = async () => {
         const listener = listenForAssertions(
             async (nodeNum: any, blockHash: any, sendRoot: any, event: any, error?: EventListenerError) => {
                 if (error) {
-                    if (isStopping) {
+                    if (isStopping) {                        
                         // If we stopped manually we don't want to process the error from the closing event.
                         return;
                     }
@@ -205,6 +204,7 @@ const startListener = async () => {
                     // If the error is an automatic reconnect after close it takes 1 second for the listener to restart, 
                     // it can happen, that we miss an assertion in that second,
                     // for that we wait 1 second before checking if we missed an assertion in between, after that the websocket should be back running
+
                     await new Promise((resolve) => {
                         setTimeout(resolve, 1000);
                     });
@@ -286,7 +286,7 @@ export function bootChallenger(cli: Command) {
             if (!cachedSigner || !cachedSecretKey) {
                 await initCli();
             }
-
+            
             // Listen for process termination and call the handler
             process.on('SIGINT', async () => {
                 console.log(`[${new Date().toISOString()}] The challenger has been terminated manually.`);
@@ -303,6 +303,7 @@ export function bootChallenger(cli: Command) {
                     isProcessingMissedAssertions = false;
                     await processMissedAssertions();
                 } catch (error) {
+
                     //TODO what should we do if this fails, restarting the cmd won't help, it will most probably fail again
                     console.log(`[${new Date().toISOString()}] Failed to handle missed assertions - ${(error as Error).message}`);
                     await sendNotification(`Failed to handle missed assertions - ${(error as Error).message}`);
