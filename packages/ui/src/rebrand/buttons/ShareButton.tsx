@@ -1,91 +1,67 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { ShareIcon } from '../icons/IconsComponents';
 
 /**
  * Interface for ShareButton props
  */
 interface ShareButtonProps {
+    /** Title to be shared */
     buttonTitle: string;
+    /** Text content to be shared */
     buttonText: string;
+    /** URL to be shared */
     shareUrl: string;
-    /** Custom CSS class for styling the button */
+    /** Custom CSS class for styling if needed */
     shareButtonClassName?: string;
-    standardButtonClassName?: string;
 }
 
 /**
  * ShareButton Component
  *
- * A button that uses the Web Share API to share a URL if supported,
- * and provides a fallback to copy the URL to the clipboard if not.
+ * A button that uses the Web Share API to share a URL if supported.
  *
  * @param {ShareButtonProps} props - Component props.
+ * @param {string} props.buttonText - The text to be shared.
+ * @param {string} props.buttonTitle - The title to be shared.
+ * @param {string} props.shareUrl - The URL to be shared.
  * @param {string} [props.shareButtonClassName] - Custom CSS classes for the share button.
- * @param {string} [props.standardButtonClassName] - Custom CSS classes for the standard button if the web share API is unavailable.
  *
  * @returns {JSX.Element} - A button that enables sharing functionality.
  */
-const ShareButton: React.FC<ShareButtonProps> = ({ buttonText, buttonTitle, shareUrl, shareButtonClassName,  standardButtonClassName}) => {
-    const [isWebShareSupported, setIsWebShareSupported] = useState(false);
+const ShareButton: React.FC<ShareButtonProps> = ({ buttonText, buttonTitle, shareUrl, shareButtonClassName }) => {
 
     /**
-     * useEffect hook to check if the Web Share API is supported when the component mounts.
-     * Sets the `isWebShareSupported` state to true or false based on browser capabilities.
-     */
-    useEffect(() => {
-        setIsWebShareSupported(!!navigator.share);
-    }, []);
-
-    /**
-     * handleShare - Triggers the Web Share API to share the current page URL.
+     * handleShare - Triggers the Web Share API to share the provided title, text, and URL.
+     * Checks if the Web Share API is available before sharing.
      *
      * @async
      * @returns {Promise<void>}
      */
     const handleShare = async () => {
-        try {
-            await navigator.share({
-                title: buttonTitle,
-                text: buttonText,
-                url: shareUrl
-            });
-            console.log('Share successful');
-        } catch (error) {
-            console.error('Error sharing:', error);
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: buttonTitle,
+                    text: buttonText,
+                    url: shareUrl,
+                });
+                console.log('Shared successfully');
+            } catch (error) {
+                console.error('Error sharing:', error);
+            }
+        } else {
+            console.error('Web Share API is not supported in this browser.');
         }
     };
 
-    /**
-     * handleFallback - Copies the current page URL to the clipboard as a fallback
-     * when the Web Share API is not supported.
-     */
-    const handleFallback = () => {
-        navigator.clipboard.writeText(window.location.href)
-            .then(() => {
-                console.log('URL copied to clipboard');
-            })
-            .catch((error) => {
-                console.error('Failed to copy URL:', error);
-            });
-    };
-
     return (
-        <div>
-            {isWebShareSupported ? (
-                <button
-                    onClick={handleShare}
-                    className={shareButtonClassName || 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600'}
-                >
-                    Share this page
-                </button>
-            ) : (
-                <button
-                    onClick={handleFallback}
-                    className={standardButtonClassName || 'px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600'}
-                >
-                    Copy link to clipboard
-                </button>
-            )}
-        </div>
+        <button
+            onClick={handleShare}
+            className={shareButtonClassName || 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-red-600'}
+            aria-label="Share this content" // Add accessibility label
+        >
+            <ShareIcon />
+        </button>
     );
 };
 
