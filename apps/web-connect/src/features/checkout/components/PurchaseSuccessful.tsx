@@ -108,7 +108,7 @@ const PurchaseSuccessful: React.FC<IPurchaseSuccessful> = ({ returnToClient }) =
 										buttonText={"Save 5% on your Sentry Node Key purchase with this link!"}
 										buttonTitle={"5% Off Sentry Node Key Purchase!"}
 										shareUrl={`${salePageBaseURL}?promoCode=${address}`}
-										shareButtonClassName={"w-full text-lg font-bold uppercase text-brandyWine"}
+										shareButtonClassName={"w-full"}
 									/></div> : 
 									<div className="mr-3 cursor-pointer absolute right-[10px] sx:top-[73px] sm:top-[96px] z-60" onClick={copyReferralCode}>
 										<Tooltip body="Copied!" open={isTooltipAllowedToOpen} extraClasses={{ content: " max-w-[75px]", body: "!text-black !font-bold" }}>
