@@ -1,6 +1,6 @@
 import axios from "axios";
 import { checkRefereeBulkSubmissionCompatible, loadOperatorKeysFromGraph_V1, loadOperatorKeysFromRPC_V1, loadOperatorWalletsFromGraph, loadOperatorWalletsFromRPC, operatorState, processClosedChallenge, processClosedChallenges_V1, processNewChallenge, processNewChallenge_V1, PublicNodeBucketInformation } from "../index.js";
-import { Challenge, config, getSentryWalletsForOperator, getSubgraphHealthStatus, retry } from "../../index.js";
+import { Challenge, getSentryWalletsForOperator, getSubgraphHealthStatus, retry } from "../../index.js";
 
 /**
  * Update the status message for display in the operator desktop app key list
@@ -9,32 +9,33 @@ import { Challenge, config, getSentryWalletsForOperator, getSubgraphHealthStatus
  */
 export async function listenForChallengesCallback(challengeNumber: bigint, challenge: Challenge, event?: any) {
 
-    if (event && challenge.rollupUsed === config.rollupAddress) {
-        compareWithCDN(challenge)
-            .then(({ publicNodeBucket, error }) => {
-                if (error) {
-                    operatorState.onAssertionMissMatchCb(publicNodeBucket, challenge, error);
-                    return;
-                }
-                operatorState.cachedLogger(`Comparison between PublicNode and Challenger was successful.`);
-            })
-            .catch(error => {
-                operatorState.cachedLogger(`Error on CND check for challenge ${Number(challenge.assertionId)}.`);
-                operatorState.cachedLogger(`${error.message}.`);
-            });
-    }
+    // if (event && challenge.rollupUsed === config.rollupAddress) {
+    //     compareWithCDN(challenge)
+    //         .then(({ publicNodeBucket, error }) => {
+    //             if (error) {
+    //                 operatorState.onAssertionMissMatchCb(publicNodeBucket, challenge, error);
+    //                 return;
+    //             }
+    //             operatorState.cachedLogger(`Comparison between PublicNode and Challenger was successful.`);
+    //         })
+    //         .catch(error => {
+    //             operatorState.cachedLogger(`Error on CND check for challenge ${Number(challenge.assertionId)}.`);
+    //             operatorState.cachedLogger(`${error.message}.`);
+    //         });
+    // }
 
-    operatorState.cachedLogger(`Received new challenge with number: ${challengeNumber}.`);
+    operatorState.cachedLogger(`Received new challenge with number: ${challengeNumber}. Delayed challenges will still accrue rewards.`);
     operatorState.cachedLogger(`Processing challenge...`);
 
     // Add a delay of 1 -300 seconds to the new challenge process so not all operators request the subgraph at the same time
-    const delay = Math.floor(Math.random() * 301);
-    await new Promise((resolve) => {
-        setTimeout(resolve, delay * 1000);
-    })
+    // const delay = Math.floor(Math.random() * 301);
+    // await new Promise((resolve) => {
+    //     setTimeout(resolve, delay * 1000);
+    // })
 
     try {
         const graphStatus = await getSubgraphHealthStatus();
+
         if (graphStatus.healthy) {
             // get the wallets, pools and referee config from the subgraph
             const submissionFilter = {};
@@ -102,6 +103,7 @@ export async function listenForChallengesCallback(challengeNumber: bigint, chall
 
             }
         }
+
     } catch (error: any) {
         operatorState.cachedLogger(`Error processing new challenge in listener callback: - ${error && error.message ? error.message : error}`);
     }

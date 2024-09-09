@@ -42,17 +42,17 @@ export const bootOperatorRuntime = async (
 
         // Check if the referee has been upgraded to V2
         const refereeIsV2 = await checkRefereeBulkSubmissionCompatible(refereeConfig);
-
+        
         // If the referee is V2
         if (refereeIsV2) {
-
+            
             // Load the operator wallets from the graph
             const bulkOwnersAndPools = await loadOperatorWalletsFromGraph(operatorState.operatorAddress, { wallets, pools }, BigInt(latestClaimableChallenge));
-
+            
             // Process the current challenge
             await processNewChallenge(openChallenge.challengeNumber, openChallenge, bulkOwnersAndPools, refereeConfig);
-
-            logFunction(`Processing open challenges.`);
+            
+            logFunction(`Processing open challenges. Challenges should occur roughly once per hour. Rewards will still accrue even if challenges are delayed.`);
 
             // Remove submissions for current challenge so we don't process it again
             bulkOwnersAndPools.forEach(b => {
@@ -83,7 +83,7 @@ export const bootOperatorRuntime = async (
             // Process the new challenge using individual submissions
             await processNewChallenge_V1(openChallenge.challengeNumber, openChallenge, nodeLicenseIds, sentryKeysMap, sentryWalletMap, mappedPools, refereeConfigFromGraph);
 
-            logFunction(`Processing open challenges.`);
+            logFunction(`Processing open challenges. Challenges should occur roughly once per hour. Rewards will still accrue even if challenges are delayed.`);
 
             //Remove submissions for current challenge so we don't process it again
             nodeLicenseIds.forEach(n => {
