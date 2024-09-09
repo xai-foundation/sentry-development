@@ -12,7 +12,7 @@ interface ShareButtonProps {
     /** URL to be shared */
     shareUrl: string;
     /** Custom CSS class for styling if needed */
-    shareButtonClassName?: string;
+    shareButtonClasses?: string;
 }
 
 /**
@@ -24,11 +24,11 @@ interface ShareButtonProps {
  * @param {string} props.buttonText - The text to be shared.
  * @param {string} props.buttonTitle - The title to be shared.
  * @param {string} props.shareUrl - The URL to be shared.
- * @param {string} [props.shareButtonClassName] - Custom CSS classes for the share button.
+ * @param {string} [props.shareButtonClasses] - Custom CSS classes for the share button.
  *
  * @returns {JSX.Element} - A button that enables sharing functionality.
  */
-const ShareButton: React.FC<ShareButtonProps> = ({ buttonText, buttonTitle, shareUrl, shareButtonClassName }) => {
+const ShareButton: React.FC<ShareButtonProps> = ({ buttonText, buttonTitle, shareUrl, shareButtonClasses }) => {
 
     /**
      * handleShare - Triggers the Web Share API to share the provided title, text, and URL.
@@ -57,7 +57,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({ buttonText, buttonTitle, shar
     return (
         <button
             onClick={handleShare}
-            className={shareButtonClassName || 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-red-600'}
+            className={shareButtonClasses || 'px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600'}
             aria-label="Share this content" // Add accessibility label
         >
             <ShareIcon />
