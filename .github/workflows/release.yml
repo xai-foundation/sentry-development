@@ -34,20 +34,24 @@ jobs:
         run: pnpm install
       
       - name: Create and unlock keychain
-        run: |
-          security create-keychain -p ${{ secrets.MAC_KEYCHAIN_PASSWORD }} build.keychain
-          security unlock-keychain -p ${{ secrets.MAC_KEYCHAIN_PASSWORD }} build.keychain
-          security set-keychain-settings -t 3600 -l build.keychain
-          security list-keychains -d user -s build.keychain login.keychain
-          security default-keychain -s build.keychain
+        uses: apple-actions/import-codesign-certs@v3
+        with: 
+          p12-file-base64: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}
+          p12-password: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+        # run: |
+        #   security create-keychain -p ${{ secrets.MAC_KEYCHAIN_PASSWORD }} build.keychain
+        #   security unlock-keychain -p ${{ secrets.MAC_KEYCHAIN_PASSWORD }} build.keychain
+        #   security set-keychain-settings -t 3600 -l build.keychain
+        #   security list-keychains -d user -s build.keychain login.keychain
+        #   security default-keychain -s build.keychain
         if: matrix.os == 'macos-latest'
 
-      - name: Import certificate into keychain
-        run: |
-          echo "${{ secrets.MAC_CERTIFICATE_PASSWORD }}" | base64 --decode > certificate.p12
-          security import certificate.p12 -k build.keychain -P ${{ secrets.MAC_CERTIFICATE_PASSWORD }} -T /usr/bin/codesign
-          security set-key-partition-list -S apple:,apple-tool:,codesign: -s -k ${{ secrets.MAC_KEYCHAIN_PASSWORD }} build.keychain
-        if: matrix.os == 'macos-latest'
+      # - name: Import certificate into keychain
+      #   run: |
+      #     echo "${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}" | base64 --decode > certificate.p12
+      #     security import certificate.p12 -k build.keychain -P ${{ secrets.MAC_CERTIFICATE_PASSWORD }} -T /usr/bin/codesign
+      #     security set-key-partition-list -S apple:,apple-tool:,codesign: -s -k ${{ secrets.MAC_KEYCHAIN_PASSWORD }} build.keychain
+      #   if: matrix.os == 'macos-latest'
 
       - name: Build monorepo
         run: npx nx run-many --target=build --all
