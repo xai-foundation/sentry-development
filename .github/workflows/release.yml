@@ -44,9 +44,9 @@ jobs:
 
       - name: Import certificate into keychain
         run: |
-          echo "$MAC_CERTIFICATE_P12_BASE64" | base64 --decode > certificate.p12
+          echo "${{ secrets.MAC_CERTIFICATE_PASSWORD }}" | base64 --decode > certificate.p12
           security import certificate.p12 -k build.keychain -P ${{ secrets.MAC_CERTIFICATE_PASSWORD }} -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k ${{ secrets.MAC_KEYCHAIN_PASSWORD }} build.keychain
+          security set-key-partition-list -S apple:,apple-tool:,codesign: -s -k ${{ secrets.MAC_KEYCHAIN_PASSWORD }} build.keychain
         if: matrix.os == 'macos-latest'
 
       - name: Build monorepo
