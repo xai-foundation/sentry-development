@@ -32,11 +32,20 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
+      
+      - name: Create and unlock keychain
+        uses: apple-actions/import-codesign-certs@v3
+        with: 
+          p12-file-base64: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}
+          p12-password: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+        if: matrix.os == 'macos-latest'
 
       - name: Build monorepo
         run: npx nx run-many --target=build --all
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
 
       - name: Upload sentry-client-desktop artifacts
         uses: actions/upload-artifact@v4
