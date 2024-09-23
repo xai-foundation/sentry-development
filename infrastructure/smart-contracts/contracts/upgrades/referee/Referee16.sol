@@ -246,7 +246,7 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
     event NewBulkSubmission(uint256 indexed challengeId, address indexed bulkAddress, uint256 stakedKeys, uint256 winningKeys);
     event UpdateBulkSubmission(uint256 indexed challengeId, address indexed bulkAddress, uint256 stakedKeys, uint256 winningKeys, uint256 increase, uint256 decrease);
     event BatchChallenge(uint256 indexed challengeId, uint64[] assertionIds);
-    
+
     function initialize(uint8 version) public reinitializer(version) {
         //isBeforeBulkState = !isBeforeBulkState;
         rollupAddress = 0xb3b08bE5041d3F94C9fD43c91434515a184a43af;
@@ -569,61 +569,6 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
         return challenges[_challengeId];
     }
 
-    /**
-     * @notice Allows users to submit multiple assertions to a challenge for a batch of keys, or for a pool to submit for a batch of keys.
-     * @dev This function was updated to be backwards compatible with the previous implementation, but the submitPoolAssertion function
-     * @dev should be used by pools to submit for multiple keys for gas optimizations.
-     * @dev This function can only be called by the owner of a NodeLicense, Pool Owner(s) or addresses they have approved on this contract.
-     * @param _nodeLicenseIds The IDs of the NodeLicenses.
-     * @param _challengeId The ID of the challenge.
-     * @param _confirmData The confirm data of the assertion. This will change with implementation of BOLD 2
-     */
-
-	function submitMultipleAssertions(
-		uint256[] memory _nodeLicenseIds,
-		uint256 _challengeId,
-		bytes memory _confirmData
-	) public {
-		require(isBeforeBulkState, "_dev01_");
-		require(challenges[_challengeId].openForSubmissions, "16");
-        
-        uint256 keyLength = _nodeLicenseIds.length;
-
-		if (keccak256(abi.encodePacked(_confirmData)) != keccak256(abi.encodePacked(challenges[_challengeId].assertionStateRootOrConfirmData))) {
-            // emit InvalidBatchSubmission(_challengeId, msg.sender, keyLength);
-			return;
-		}
-
-		for (uint256 i = 0; i < keyLength; i++) {
-            uint256 _nodeLicenseId = _nodeLicenseIds[i];
-            if (!submissions[_challengeId][_nodeLicenseId].submitted) {
-                
-                address licenseOwner = NodeLicense(nodeLicenseAddress).ownerOf(_nodeLicenseId);
-                address assignedPool = assignedKeyToPool[_nodeLicenseId];
-
-                if(isValidOperator(licenseOwner, assignedPool)){
-                    _submitAssertion(_nodeLicenseId, _challengeId, _confirmData, licenseOwner, assignedPool);
-                }
-            }
-		}
-	}
-
-    /**
-     * @notice Submits an assertion to a challenge.
-     * @dev This function can only be called by the owner of a NodeLicense or addresses they have approved on this contract.
-     * @param _nodeLicenseId The ID of the NodeLicense.
-     */
-    function submitAssertionToChallenge(
-        uint256 _nodeLicenseId,
-        uint256 _challengeId,
-        bytes memory _confirmData
-    ) public {
-        // Call the internal function to claim the reward
-        uint256[] memory keyIds = new uint256[](1);
-        keyIds[0] = _nodeLicenseId;
-        submitMultipleAssertions(keyIds, _challengeId, _confirmData);
-    }
-
     function isValidOperator(address licenseOwner, address assignedPool) internal view returns (bool) {
         return licenseOwner == msg.sender ||
             isApprovedForOperator(licenseOwner, msg.sender) ||
@@ -631,43 +576,6 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
                 assignedPool != address(0) &&
                 PoolFactory10(poolFactoryAddress).isDelegateOfPoolOrOwner(msg.sender, assignedPool)
             );
-    }
-      
-    function _submitAssertion(uint256 _nodeLicenseId, uint256 _challengeId, bytes memory _confirmData, address licenseOwner, address assignedPool) internal {
-        
-        // Support v1 (no pools) & v2 (pools)
-		uint256 stakedAmount = stakedAmounts[assignedPool];
-		if (assignedPool == address(0)) {
-			stakedAmount = stakedAmounts[licenseOwner];
-			uint256 ownerUnstakedAmount = NodeLicense(nodeLicenseAddress).balanceOf(licenseOwner) - assignedKeysOfUserCount[licenseOwner];
-			if (ownerUnstakedAmount * maxStakeAmountPerLicense < stakedAmount) {
-				stakedAmount = ownerUnstakedAmount * maxStakeAmountPerLicense;
-			}
-		} else {
-			if (assignedKeysToPoolCount[assignedPool] * maxStakeAmountPerLicense < stakedAmount) {
-				stakedAmount = assignedKeysToPoolCount[assignedPool] * maxStakeAmountPerLicense;
-			}
-		}
-
-        // Check the user is actually eligible for receiving a reward, do not count them in numberOfEligibleClaimers if they are not able to receive a reward
-        (bool hashEligible, ) = RefereeCalculations(refereeCalculationsAddress).createAssertionHashAndCheckPayout(_nodeLicenseId, _challengeId, _getBoostFactor(stakedAmount), _confirmData, challenges[_challengeId].challengerSignedHash);
-
-        // Store the assertionSubmission to a map
-        submissions[_challengeId][_nodeLicenseId] = Submission({
-            submitted: true,
-            claimed: false,
-            eligibleForPayout: hashEligible,
-            nodeLicenseId: _nodeLicenseId,
-            assertionStateRootOrConfirmData: _confirmData
-        });
-
-        // Keep track of how many submissions submitted were eligible for the reward
-        if (hashEligible) {
-            challenges[_challengeId].numberOfEligibleClaimers++;
-        }
-
-        // Emit the AssertionSubmitted event
-        emit AssertionSubmitted(_challengeId, _nodeLicenseId);
     }
 
     function _validateChallengeIsClaimable(Challenge memory _challenge) internal pure{
