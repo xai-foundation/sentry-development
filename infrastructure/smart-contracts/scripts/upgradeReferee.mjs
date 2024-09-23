@@ -3,6 +3,7 @@ import { safeVerify } from "../utils/safeVerify.mjs";
 const { ethers, upgrades } = hardhat;
 //TODO Add current proxy contract address to update
 const address = "0xFaBd7d8D3540254E94811FB33A94537c04D3fEB7";
+const address2 = "0xF84D76755a68bE9DFdab9a0b6d934896Ceab957b";
 
 
 async function main() {
@@ -12,7 +13,7 @@ async function main() {
     const Referee16 = await ethers.getContractFactory("contracts/upgrades/referee/Referee16.sol:Referee16");
     console.log("Got factory");
 
-    const refereeContract = await upgrades.upgradeProxy(address, Referee16, { call: { fn: "initialize", args: [19] } });
+    const refereeContract = await upgrades.upgradeProxy(address2, Referee16, { call: { fn: "initialize", args: [31] } });
     const impAddress = await refereeContract.getAddress();
     console.log("Address of the upgraded contract", impAddress);
     console.log("Upgraded Referee16");
