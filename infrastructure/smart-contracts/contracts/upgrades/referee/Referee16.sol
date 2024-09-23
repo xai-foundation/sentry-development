@@ -251,7 +251,7 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
         //isBeforeBulkState = !isBeforeBulkState;
         rollupAddress = 0xb3b08bE5041d3F94C9fD43c91434515a184a43af;
         uint256 lastChallengeId = challengeCounter - 1;
-        challenges[lastChallengeId].assertionId = 5800;
+        challenges[lastChallengeId].assertionId = 5825;
     }
 
     modifier onlyPoolFactory() {
