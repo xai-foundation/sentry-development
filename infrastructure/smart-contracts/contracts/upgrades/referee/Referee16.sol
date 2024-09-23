@@ -13,40 +13,6 @@ import "../pool-factory/PoolFactory10.sol";
 import "../../RefereeCalculations.sol";
 
 
-interface IRollupCore {
-
-    struct Node {
-        // Hash of the state of the chain as of this node
-        bytes32 stateHash;
-        // Hash of the data that can be challenged
-        bytes32 challengeHash;
-        // Hash of the data that will be committed if this node is confirmed
-        bytes32 confirmData;
-        // Index of the node previous to this one
-        uint64 prevNum;
-        // Deadline at which this node can be confirmed
-        uint64 deadlineBlock;
-        // Deadline at which a child of this node can be confirmed
-        uint64 noChildConfirmedBeforeBlock;
-        // Number of stakers staked on this node. This includes real stakers and zombies
-        uint64 stakerCount;
-        // Number of stakers staked on a child node. This includes real stakers and zombies
-        uint64 childStakerCount;
-        // This value starts at zero and is set to a value when the first child is created. After that it is constant until the node is destroyed or the owner destroys pending nodes
-        uint64 firstChildBlock;
-        // The number of the latest child of this node to be created
-        uint64 latestChildNumber;
-        // The block number when this node was created
-        uint64 createdAtBlock;
-        // A hash of all the data needed to determine this node's validity, to protect against reorgs
-        bytes32 nodeHash;
-    }
-    /**
-     * @notice Get the Node for the given index.
-     */
-    function getNode(uint64 nodeNum) external view returns (Node memory);
-}
-
 // Error Codes
 // 1: Only PoolFactory can call this function.
 // 2: Index out of bounds.
@@ -105,6 +71,7 @@ interface IRollupCore {
 // 55: Cannot stake mixed keys. All keys must be same status (submitted or not submitted) for the current challenge.
 // 56: Only NodeLicense contract can call this function.
 // 57: You do not have any keys available to submit for.
+// 58: Invalid Bulksubmission claim
 
 contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
@@ -191,10 +158,9 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
     
     // Mapping for amount of assigned keys of a user
     mapping(address => uint256) public assignedKeysOfUserCount;
-        
+
     // Mapping to store all of the pool submissions
     mapping(uint256 => mapping(address => PoolSubmission)) public poolSubmissions;
-
 
     // Referee Calculations contract address
     address public refereeCalculationsAddress;
@@ -279,9 +245,11 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
     event UnstakeV1(address indexed user, uint256 amount, uint256 totalStaked);
     event NewBulkSubmission(uint256 indexed challengeId, address indexed bulkAddress, uint256 stakedKeys, uint256 winningKeys);
     event UpdateBulkSubmission(uint256 indexed challengeId, address indexed bulkAddress, uint256 stakedKeys, uint256 winningKeys, uint256 increase, uint256 decrease);
-
+    event BatchChallenge(uint256 indexed challengeId, uint64[] assertionIds);
+    
     function initialize(uint8 version) public reinitializer(version) {
-        isBeforeBulkState = !isBeforeBulkState;
+        //isBeforeBulkState = !isBeforeBulkState;
+        rollupAddress = 0xb3b08bE5041d3F94C9fD43c91434515a184a43af;
     }
 
     modifier onlyPoolFactory() {
@@ -431,10 +399,19 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
      * @return uint256 The challenge emission.
      * @return uint256 The emission tier.
      */
-     function calculateChallengeEmissionAndTier() public view returns (uint256, uint256) {
+    function calculateChallengeEmissionAndTier() public view returns (uint256, uint256) {
         uint256 totalSupply = getCombinedTotalSupply();  
         uint256 maxSupply = Xai(xaiAddress).MAX_SUPPLY();
-        return RefereeCalculations(refereeCalculationsAddress).calculateChallengeEmissionAndTier(totalSupply, maxSupply);
+
+        // Get the timestamp of the start of the current challenge
+        uint256 startTs;
+        if (challengeCounter == 0) {
+            startTs = block.timestamp - 3600; //1 hour
+        } else {
+            startTs = challenges[challengeCounter - 1].createdTimestamp;
+        }
+
+        return RefereeCalculations(refereeCalculationsAddress).calculateChallengeEmissionAndTier(totalSupply, maxSupply, startTs, block.timestamp);
     }
 
     /**
@@ -454,7 +431,7 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
         bytes32 _confirmData,
         uint64 _assertionTimestamp,
         bytes memory _challengerSignedHash
-    ) public {
+    ) public onlyRole(CHALLENGER_ROLE) {
 
         // check the rollupAddress is set
         require(rollupAddress != address(0), "7");
@@ -462,22 +439,78 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
         // check the challengerPublicKey is set
         require(challengerPublicKey.length != 0, "8");
 
-        // check the assertionId and rollupAddress combo haven't been submitted yet
-        bytes32 comboHash = keccak256(abi.encodePacked(_assertionId, rollupAddress));
-        require(!rollupAssertionTracker[comboHash], "9");
-        rollupAssertionTracker[comboHash] = true;
+        require(_assertionId > _predecessorAssertionId, "9");
 
-        // verify the data inside the hash matched the data pulled from the rollup contract
-        // if (isCheckingAssertions) {
+        // Connect to the rollup contract
+        IRollupCore rollup = IRollupCore(rollupAddress);
 
-        //     // get the node information from the rollup.
-        //     Node memory node = IRollupCore(rollupAddress).getNode(_assertionId);
+        // If the gap is more than 1 assertion, we need to handle as a batch challenge
+        bool isBatch = _assertionId - _predecessorAssertionId > 1;
 
-        //     require(node.prevNum == _predecessorAssertionId, "10");
-        //     require(node.confirmData == _confirmData, "11");
-        //     require(node.createdAtBlock == _assertionTimestamp, "12");
-        // }
-        
+        // Initialize the array to store the assertionIds and confirmData for the batch challenge
+        uint64 [] memory assertionIds = new uint64[](_assertionId - _predecessorAssertionId);
+        bytes32 [] memory batchConfirmData = new bytes32[](_assertionId - _predecessorAssertionId);
+
+        // Loop through the assertions and check if they have been submitted
+        for(uint64 i = _predecessorAssertionId + 1; i <= _assertionId; i++){
+
+            // create the comboHash for the assertionId and rollupAddress
+            bytes32 comboHashBatch = keccak256(abi.encodePacked(i, rollupAddress));
+
+            // check the assertionId and rollupAddress combo haven't been submitted yet
+            require(!rollupAssertionTracker[comboHashBatch], "9");
+
+            // set the comboHash to true to indicate it has been submitted
+            rollupAssertionTracker[comboHashBatch] = true;
+
+            // If assertion checking is active, we need to verify the assertions
+            // Assertion checking would only be disabled if for some reason
+            // the Rollup contract is not available on the network
+            if (isCheckingAssertions) {
+
+                // get the node information for this assertion from the rollup.
+                IRollupCore.Node memory node = rollup.getNode(i);
+
+                // check the _predecessorAssertionId is correct
+                require(node.prevNum == i - 1, "10");   
+
+                // Check the confirmData & timestamp for the assertion
+                if(isBatch){
+
+                    // Store the assertionIds and confirmData for the batch challenge
+                    assertionIds[i - _predecessorAssertionId - 1] = i;
+                    batchConfirmData[i - _predecessorAssertionId - 1] = node.confirmData;
+
+                    // If it is a batch challenge, we need to verify the
+                    // timestamp but only for the last assertionId
+                    if(i == _assertionId){
+                        // Verify Timestamp
+                        require(node.createdAtBlock == _assertionTimestamp, "12");
+                    }
+
+                }else{
+
+                    // Verify individual confirmData
+                    require(node.createdAtBlock == _assertionTimestamp, "12");
+                    require(node.confirmData == _confirmData, "11");
+                }
+                
+            }
+        }
+
+        // If we are handling as a batch challenge, we need to check the confirmData for all assertions
+        if(isBatch){
+            if(isCheckingAssertions){
+                // Hash all of the confirmData for the batch challenge
+                bytes32 confirmHash  = keccak256(abi.encodePacked(batchConfirmData));
+
+                // Confirm the hash matches what was submitted
+                require(_confirmData == confirmHash, "11");
+            }
+            // emit the batch challenge event
+            emit BatchChallenge(challengeCounter, assertionIds);
+        }
+                
         // we need to determine how much token will be emitted
         (uint256 challengeEmission,) = calculateChallengeEmissionAndTier();
 
@@ -517,8 +550,10 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
             amountClaimedByClaimers: 0
         });
 
-        // emit the events
-        emit ChallengeSubmitted(challengeCounter);   
+
+        // emit the event
+        emit ChallengeSubmitted(challengeCounter);
+
 
         // increment the challenge counter
         challengeCounter++;
@@ -770,9 +805,15 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
     }
 
     /**
-     * @dev Looks up payout boostFactor based on the staking tier.
+     * @dev Looks up payout boostFactor based on the staking tier. 
+     * Boostfactor is based with 4 decimals:
+     *      1     => 0.0001%
+     *      100   => 0.01%
+     *      10000 => 1%
+     *      20000 => 2%
+     * The current base chance for no stae is 100 => 0.01%
      * @param stakedAmount The staked amount.
-     * @return The payout chance boostFactor. 200 for double the chance.
+     * @return The payout chance boostFactor.
      */
     function _getBoostFactor(uint256 stakedAmount) internal view returns (uint256) {
         if (stakedAmount < stakeAmountTierThresholds[0]) {

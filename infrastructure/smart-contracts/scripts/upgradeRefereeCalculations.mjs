@@ -1,24 +1,24 @@
 import hardhat from "hardhat";
+import { safeVerify } from "../utils/safeVerify.mjs";
 const { ethers, upgrades } = hardhat;
 //TODO Add current proxy contract address to update
-const address = "0xFaBd7d8D3540254E94811FB33A94537c04D3fEB7";
+const address = "0x86Ca7fF8F3450672E6e7404dfce147CC9DBCaF51";
 
 
 async function main() {
     const [deployer] = (await ethers.getSigners());
     const deployerAddress = await deployer.getAddress();
     console.log("Deployer address", deployerAddress);
-    const Referee16 = await ethers.getContractFactory("contracts/upgrades/referee/Referee16.sol:Referee16");
+    const referee = await ethers.getContractFactory("contracts/RefereeCalculations.sol:RefereeCalculations");
     console.log("Got factory");
-
-    await upgrades.upgradeProxy(address, Referee16, { call: { fn: "initialize", args: [16] } });
-    console.log("Upgraded Referee16");
+    await upgrades.upgradeProxy(address, referee);
+    console.log("Upgraded");
 
     await run("verify:verify", {
         address: address,
-        constructorArguments: [16],
-        contract: "contracts/upgrades/referee/Referee16.sol:Referee16"
-      });
+        constructorArguments: [],
+        contract: "contracts/RefereeCalculations.sol:RefereeCalculations"
+    });
     console.log("verified")
 }
 
