@@ -13,10 +13,10 @@ async function main() {
     const deployer = (await ethers.getSigners())[0];
     const arbitrumRPC = "https://arb-mainnet.g.alchemy.com/v2/oD4X3JXvJclnt36mDkqnp9CO2sZkNhYT";
 
-	const assertionId = 5850;
+	const assertionId = 5851;
     //const diff = 7574;
     const sepoliaAssertionId = assertionId;
-    const block = 255195800;
+    const block = 255209974;
     const BLOCKS_TO_WAIT = 1;
 
 	const abi = [
