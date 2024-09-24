@@ -52,10 +52,10 @@ export const bootOperatorRuntime = async (
 
         // If the referee is V2
         if (refereeIsV2) {
-
+            
             // Load the operator wallets from the graph
             const bulkOwnersAndPools = await loadOperatorWalletsFromGraph(operatorState.operatorAddress, { wallets, pools }, BigInt(latestClaimableChallenge));
-
+            
             // Process the current challenge
             await processNewChallenge(openChallenge.challengeNumber, openChallenge, bulkOwnersAndPools, refereeConfig);
 

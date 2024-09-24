@@ -16,7 +16,7 @@ interface IPurchaseSuccessful {
 	returnToClient: (hash: string) => void;
 }
 
-const salePageBaseURL = "https://sentry.xai.games";
+const salePageBaseURL = "https://xai-foundation.github.io/sentry-development";
 const operatorDownloadLink = "https://github.com/xai-foundation/sentry/releases/latest"
 
 const PurchaseSuccessful: React.FC<IPurchaseSuccessful> = ({ returnToClient }) => {
@@ -99,7 +99,7 @@ const PurchaseSuccessful: React.FC<IPurchaseSuccessful> = ({ returnToClient }) =
 										<div
 											className={`relative items-center lg:w-[400px] w-full bg-optophobia h-fit flex justify-between text-americanSilver p-2 overflow-hidden text-lg font-medium global-clip-btn`}
 										>
-											<p className="select-none lg:max-w-[300px] sx:max-w-[210px] sm:max-w-[190px] overflow-x-hidden">{`${salePageBaseURL}/${address}`}</p>
+											<p className="select-none lg:max-w-[300px] sx:max-w-[210px] sm:max-w-[190px] overflow-x-hidden">{`https://sentry.xai.games/${address}`}</p>
 
 										</div>
 									</div>			

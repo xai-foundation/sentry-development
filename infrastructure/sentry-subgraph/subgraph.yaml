@@ -155,23 +155,23 @@ dataSources:
         - event: NodeConfirmed(indexed uint64,bytes32,bytes32)
           handler: handleNodeConfirmed
       file: ./src/referee.ts
-  # - kind: ethereum
-  #   name: TinyKeysAirdrop
-  #   network: arbitrum-one
-  #   source:
-  #     address: TODO ADD ADDRESS
-  #     abi: TinyKeysAirdrop
-  #     startBlock: TODO ADD BLOCK
-  #   mapping:
-  #     kind: ethereum/events
-  #     apiVersion: 0.0.7
-  #     language: wasm/assemblyscript
-  #     entities:
-  #       - AirdropSegmentCompleteEvent
-  #     abis:
-  #       - name: TinyKeysAirdrop
-  #         file: ./abis/TinyKeysAirdrop.json
-  #     eventHandlers:
-  #       - event: AirdropSegmentStakeComplete(indexed address,indexed address,uint256,uint256)
-  #         handler: handleAirdropStakeSegmentComplete
-  #     file: ./src/tiny-keys-airdrop.ts
+  - kind: ethereum
+    name: TinyKeysAirdrop
+    network: arbitrum-one
+    source:
+      address: "0x4Cb9a7AE498CEDcBb5EAe9f25736aE7d428C9D66"
+      abi: TinyKeysAirdrop
+      startBlock: 157193610
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - AirdropSegmentCompleteEvent
+      abis:
+        - name: TinyKeysAirdrop
+          file: ./abis/TinyKeysAirdrop.json
+      eventHandlers:
+        - event: AirdropSegmentStakeComplete(indexed address,indexed address,uint256,uint256)
+          handler: handleAirdropStakeSegmentComplete
+      file: ./src/tiny-keys-airdrop.ts

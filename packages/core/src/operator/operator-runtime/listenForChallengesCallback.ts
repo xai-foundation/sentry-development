@@ -104,6 +104,7 @@ export async function listenForChallengesCallback(challengeNumber: bigint, chall
 
             }
         }
+
     } catch (error: any) {
         operatorState.cachedLogger(`Error processing new challenge in listener callback: - ${error && error.message ? error.message : error}`);
     }
