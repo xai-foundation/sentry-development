@@ -4,7 +4,7 @@ import svgr from "vite-plugin-svgr";
 import path from "node:path";
 
 export default defineConfig({
-	base: "/sentry-development",
+	base: "/",
 	resolve: {
 		alias: [
 			{
