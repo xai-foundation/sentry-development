@@ -1,13 +1,23 @@
 import axios from "axios"
 
+let count = 0;
+
 /**
  * 
  * @returns Status and possible error from the graph version
  */
 export async function getSubgraphHealthStatus(): Promise<{ healthy: boolean, error?: string }> {
 
+    count++;
+    if (count % 2 == 0) {
+        return {
+            healthy: false,
+            error: `Something went wrong reading the graph status: MANUAL`
+        }
+    }
+
     try {
-        const url = `https://subgraph.satsuma-prod.com/f37507ea64fb/xai/sentry/status`;
+        const url = `https://subgraph.satsuma-prod.com/f37507ea64fb/xai/sentry-sepolia/status`;
         const response = await axios.get(url);
         if (response.status === 200) {
             const status = response.data.data.indexingStatusForCurrentVersion.health;

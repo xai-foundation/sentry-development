@@ -134,7 +134,7 @@ export function ClaimToken() {
 													className={`w-[576px] h-16 ${ready ? "bg-[#F30919]" : "bg-gray-400 cursor-default"} text-sm text-white p-2 uppercase font-semibold`}
 													disabled={!ready}
 												>
-													{chain?.id === 42_161 ? "Claim" : "Please Switch to Arbitrum One"}
+													{"Claim"}
 												</button>
 											</div>
 											{error && (
