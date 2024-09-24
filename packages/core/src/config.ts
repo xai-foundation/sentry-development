@@ -18,8 +18,8 @@ export let config = {
   "refereeAddress": "0xF84D76755a68bE9DFdab9a0b6d934896Ceab957b",
   "refereeDeployedBlockNumber": 157193676,
   "refereeImplementationAddress": "0x29a7b907fdf4a9235f46d891b7aa1e7d3d35a3b6",
-  "refereeCalculationsAddress": "", // TODO Add RefereeCalculations address
-  "rollupAddress": "0xC47DacFbAa80Bd9D8112F4e8069482c2A3221336",
+  "refereeCalculationsAddress": "0x86Ca7fF8F3450672E6e7404dfce147CC9DBCaF51",
+  "rollupAddress": "0xb3b08be5041d3f94c9fd43c91434515a184a43af",
   "xaiAddress": "0x724E98F16aC707130664bb00F4397406F74732D0",
   "xaiDeployedBlockNumber": 157193610,
   "xaiImplementationAddress": "0x3fb787101dc6be47cfe18aeee15404dcc842e6af",
@@ -29,7 +29,7 @@ export let config = {
   "poolFactoryAddress": "0x87Ae2373007C01FBCED0dCCe4a23CA3f17D1fA9A",
   "poolFactoryAddressImplementationAddress": "0x87Ae2373007C01FBCED0dCCe4a23CA3f17D1fA9A",
   "defaultNetworkName": "arbitrumSepolia",
-  "subgraphEndpoint": "https://subgraph.satsuma-prod.com/f37507ea64fb/xai/sentry-sepolia/version/0.0.19-sepolia-102/api",
+  "subgraphEndpoint": "https://subgraph.satsuma-prod.com/f37507ea64fb/xai/sentry-sepolia/version/0.0.25-sepolia-mock-103/api",
   "publicRPC": "https://arb-sepolia.g.alchemy.com/v2/8aXl_Mw4FGFlgxQO8Jz7FVPh2cg5m2_B",
   "alchemyApiKey": "8aXl_Mw4FGFlgxQO8Jz7FVPh2cg5m2_B"
 };
