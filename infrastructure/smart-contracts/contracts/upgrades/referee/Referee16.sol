@@ -250,8 +250,9 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
     function initialize(uint8 version) public reinitializer(version) {
         //isBeforeBulkState = !isBeforeBulkState;
         rollupAddress = 0xb3b08bE5041d3F94C9fD43c91434515a184a43af;
-        uint256 lastChallengeId = challengeCounter - 1;
-        challenges[lastChallengeId].assertionId = 5825;
+        //uint256 lastChallengeId = challengeCounter - 1;
+        //challenges[lastChallengeId].assertionId = 5825;
+        challengerPublicKey = hex"a8e0de35ea55e0cbdf62b7b396cf3c79230b87760018bb0ba84fe6dde75f91c9bae7fd01f0c7821c4b7c2a489e61a826";
     }
 
     modifier onlyPoolFactory() {
