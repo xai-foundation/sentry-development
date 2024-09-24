@@ -1,5 +1,8 @@
 import { getNodeConfirmedEvents, createNode, confirmNode } from "./utils.mjs";
 
+// Only Changes From Production
+// 1. Operator Delay Commented Out
+// 2. 50 Mins between challenges reduced to 2 mins
 
 async function main() {
 
