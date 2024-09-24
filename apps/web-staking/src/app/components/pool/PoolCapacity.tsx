@@ -15,7 +15,7 @@ const PoolCapacity = ({ pool }: { pool: PoolInfo }) => {
               size="sm"
               radius="none"
               aria-labelledby="progress"
-              value={(pool.totalStakedAmount / pool.maxStakedAmount) * 100 ?? 0}
+              value={(pool.totalStakedAmount / pool.maxStakedAmount) * 100}
               classNames={{
                 indicator: "bg-white "
               }}
@@ -31,7 +31,7 @@ const PoolCapacity = ({ pool }: { pool: PoolInfo }) => {
               size="sm"
               radius="none"
               aria-labelledby="progress"
-              value={(pool.keyCount / pool.maxKeyCount!) * 100 ?? 0}
+              value={(pool.keyCount / pool.maxKeyCount!) * 100}
               classNames={{
                 indicator: "bg-white "
               }}
