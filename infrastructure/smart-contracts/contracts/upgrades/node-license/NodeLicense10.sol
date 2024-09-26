@@ -82,6 +82,9 @@ contract NodeLicense10 is ERC721EnumerableUpgradeable, AccessControlUpgradeable 
     // Pause Minting
     bool public mintingPaused;
 
+    // Reentrancy guard boolean
+    bool private _reentrancyGuardClaimReferralReward;
+
     bytes32 public constant AIRDROP_ADMIN_ROLE = keccak256("AIRDROP_ADMIN_ROLE");
 
 
@@ -135,6 +138,18 @@ contract NodeLicense10 is ERC721EnumerableUpgradeable, AccessControlUpgradeable 
     //     _grantRole(AIRDROP_ADMIN_ROLE, airdropAdmin);
     // }
 
+    /** 
+    * @notice Reentrancy guard modifier for the claimReferralReward function
+    * @dev This modifier prevents reentrancy attacks by setting a boolean to true when the function is called
+    */
+    
+    modifier reentrancyGuardClaimReferralReward() {
+        require(!_reentrancyGuardClaimReferralReward, "Reentrancy guard: reentrant call");
+        _reentrancyGuardClaimReferralReward = true;
+        _;
+        _reentrancyGuardClaimReferralReward = false;
+    }
+
     /**
      * @notice Creates a new promo code.
      * @param _promoCode The promo code.
@@ -181,18 +196,31 @@ contract NodeLicense10 is ERC721EnumerableUpgradeable, AccessControlUpgradeable 
      * @param _promoCode The promo code.
      */
     function mint(uint256 _amount, string calldata _promoCode) public payable {
+        _mintInternal(msg.sender, _amount, _promoCode);
+    }
+    /**
+     * @notice Mints new NodeLicense tokens.
+     * @param _mintToAddress The address to mint the tokens to.
+     * @param _amount The amount of tokens to mint.
+     * @param _promoCode The promo code.
+     */
+    function mintTo(address _mintToAddress, uint256 _amount, string calldata _promoCode) public payable {
+        _mintInternal(_mintToAddress, _amount, _promoCode);
+    }
+
+    function _mintInternal(address _mintToAddress, uint256 _amount, string calldata _promoCode) internal {
         // Validate the mint data
         _validateMint(_amount);
 
         // Calculate the final price and average cost
         uint256 finalPrice = price(_amount, _promoCode);
-        uint256 averageCost = msg.value / _amount;
+        uint256 averageCost = finalPrice / _amount;
 
         // Confirm that the ether value sent is correct
         require(msg.value >= finalPrice, "Ether value sent is not correct");
 
         // Mint the NodeLicense tokens
-        _mintNodeLicense(_amount, averageCost, msg.sender);
+        _mintNodeLicense(_amount, averageCost, _mintToAddress);
 
         // Calculate the referral reward and determine if the promo code is an address
         (uint256 referralReward, address recipientAddress)  = _calculateReferralReward(finalPrice, _promoCode);
@@ -231,7 +259,7 @@ contract NodeLicense10 is ERC721EnumerableUpgradeable, AccessControlUpgradeable 
         uint256 finalPrice = ethToXai(finalEthPrice);
 
         // Confirm the final price does not exceed the expected cost
-        require(_expectedCost >= finalPrice, "Price Exceeds Expected Cost");
+        require(finalPrice <= _expectedCost, "Price Exceeds Expected Cost");
 
         uint256 averageCost = finalEthPrice / _amount;
 
@@ -483,7 +511,7 @@ contract NodeLicense10 is ERC721EnumerableUpgradeable, AccessControlUpgradeable 
      * @dev The function checks if claiming is enabled and if the caller has a reward to claim.
      * If both conditions are met, the reward is transferred to the caller and their reward balance is reset.
      */
-    function claimReferralReward() external {
+    function claimReferralReward() external reentrancyGuardClaimReferralReward {
         require(claimable, "Claiming of referral rewards is currently disabled");
         uint256 reward = _referralRewards[msg.sender];
         // Pay Xai & esXAI rewards if they exist
@@ -492,22 +520,23 @@ contract NodeLicense10 is ERC721EnumerableUpgradeable, AccessControlUpgradeable 
 
         // Require that the user has a reward to claim
         require(reward > 0 || rewardXai > 0 || rewardEsXai > 0, "No referral reward to claim");
-
-        (bool success, ) = msg.sender.call{value: reward}("");
-        require(success, "Transfer failed.");
-
+        
         // Reset the referral reward balance
         _referralRewards[msg.sender] = 0;
+        _referralRewardsXai[msg.sender] = 0;
+        _referralRewardsEsXai[msg.sender] = 0;
+
+        // Transfer the rewards to the caller
+        (bool success, ) = msg.sender.call{value: reward}("");
+        require(success, "Transfer failed.");
 
         if(rewardXai > 0){
             IERC20 token = IERC20(xaiAddress);
             token.transfer(msg.sender, rewardXai);
-            _referralRewardsXai[msg.sender] = 0;
         }
         if(rewardEsXai > 0){
             IERC20 token = IERC20(esXaiAddress);
             token.transfer(msg.sender, rewardEsXai);
-            _referralRewardsEsXai[msg.sender] = 0;
         }
         emit RewardClaimed(msg.sender, reward, rewardXai, rewardEsXai); 
     }
@@ -775,4 +804,3 @@ contract NodeLicense10 is ERC721EnumerableUpgradeable, AccessControlUpgradeable 
     }
 
 }
-

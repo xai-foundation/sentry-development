@@ -7,7 +7,7 @@ async function main() {
     const [deployer] = (await ethers.getSigners());
     const deployerAddress = await deployer.getAddress();
     console.log("Deployer address", deployerAddress);
-    const NodeLicense = await ethers.getContractFactory("contracts/upgrades/node-license/NodeLicense8.sol:NodeLicense8");
+    const NodeLicense = await ethers.getContractFactory("contracts/upgrades/node-license/NodeLicense10.sol:NodeLicense10");
     console.log("Got factory");
     await upgrades.upgradeProxy(address, NodeLicense);
     console.log("Upgraded");
@@ -15,7 +15,7 @@ async function main() {
     await run("verify:verify", {
         address: address,
         constructorArguments: [],
-        contract: "contracts/upgrades/node-license/NodeLicense8.sol:NodeLicense8"
+        contract: "contracts/upgrades/node-license/NodeLicense10.sol:NodeLicense10"
     });
     console.log("verified")
 }
