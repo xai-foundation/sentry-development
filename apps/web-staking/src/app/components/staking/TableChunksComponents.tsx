@@ -198,8 +198,8 @@ export function TableRowCapacity({
                     aria-labelledby="progress"
                     value={
                       showTableKeys
-                          ? (pool.keyCount / maxKeyPerPool) * 100 ?? 0
-                          : (pool.totalStakedAmount / pool.maxStakedAmount) * 100 ?? 0
+                          ? (pool.keyCount / maxKeyPerPool) * 100
+                          : (pool.totalStakedAmount / pool.maxStakedAmount) * 100
                     }
                     classNames={{
                       indicator: "bg-white"
