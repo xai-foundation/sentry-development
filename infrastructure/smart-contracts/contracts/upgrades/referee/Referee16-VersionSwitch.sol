@@ -12,7 +12,6 @@ import "../../esXai.sol";
 import "../pool-factory/PoolFactory10.sol";
 import "../../RefereeCalculations.sol";
 
-
 // Error Codes
 // 1: Only PoolFactory can call this function.
 // 2: Index out of bounds.
@@ -71,9 +70,8 @@ import "../../RefereeCalculations.sol";
 // 55: Cannot stake mixed keys. All keys must be same status (submitted or not submitted) for the current challenge.
 // 56: Only NodeLicense contract can call this function.
 // 57: You do not have any keys available to submit for.
-// 58: Invalid Bulksubmission claim
 
-contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
+contract Referee16VersionSwitch is Initializable, AccessControlEnumerableUpgradeable {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     // Define roles
@@ -158,9 +156,10 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
     
     // Mapping for amount of assigned keys of a user
     mapping(address => uint256) public assignedKeysOfUserCount;
-
+        
     // Mapping to store all of the pool submissions
     mapping(uint256 => mapping(address => PoolSubmission)) public poolSubmissions;
+
 
     // Referee Calculations contract address
     address public refereeCalculationsAddress;
@@ -245,14 +244,9 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
     event UnstakeV1(address indexed user, uint256 amount, uint256 totalStaked);
     event NewBulkSubmission(uint256 indexed challengeId, address indexed bulkAddress, uint256 stakedKeys, uint256 winningKeys);
     event UpdateBulkSubmission(uint256 indexed challengeId, address indexed bulkAddress, uint256 stakedKeys, uint256 winningKeys, uint256 increase, uint256 decrease);
-    event BatchChallenge(uint256 indexed challengeId, uint64[] assertionIds);
 
     function initialize(uint8 version) public reinitializer(version) {
-        //isBeforeBulkState = !isBeforeBulkState;
-        rollupAddress = 0xb3b08bE5041d3F94C9fD43c91434515a184a43af;
-        //uint256 lastChallengeId = challengeCounter - 1;
-        //challenges[lastChallengeId].assertionId = 5825;
-        challengerPublicKey = hex"a8e0de35ea55e0cbdf62b7b396cf3c79230b87760018bb0ba84fe6dde75f91c9bae7fd01f0c7821c4b7c2a489e61a826";
+        isBeforeBulkState = !isBeforeBulkState;
     }
 
     modifier onlyPoolFactory() {
@@ -417,6 +411,7 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
         return RefereeCalculations(refereeCalculationsAddress).calculateChallengeEmissionAndTier(totalSupply, maxSupply, startTs, block.timestamp);
     }
 
+
     /**
      * @notice Submits a challenge to the contract.
      * @dev This function verifies the caller is the challenger, checks if an assertion hasn't already been submitted for this ID,
@@ -434,7 +429,7 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
         bytes32 _confirmData,
         uint64 _assertionTimestamp,
         bytes memory _challengerSignedHash
-    ) public onlyRole(CHALLENGER_ROLE) {
+    ) public {
 
         // check the rollupAddress is set
         require(rollupAddress != address(0), "7");
@@ -442,78 +437,22 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
         // check the challengerPublicKey is set
         require(challengerPublicKey.length != 0, "8");
 
-        require(_assertionId > _predecessorAssertionId, "9");
+        // check the assertionId and rollupAddress combo haven't been submitted yet
+        bytes32 comboHash = keccak256(abi.encodePacked(_assertionId, rollupAddress));
+        require(!rollupAssertionTracker[comboHash], "9");
+        rollupAssertionTracker[comboHash] = true;
 
-        // Connect to the rollup contract
-        IRollupCore rollup = IRollupCore(rollupAddress);
+        // verify the data inside the hash matched the data pulled from the rollup contract
+        // if (isCheckingAssertions) {
 
-        // If the gap is more than 1 assertion, we need to handle as a batch challenge
-        bool isBatch = _assertionId - _predecessorAssertionId > 1;
+        //     // get the node information from the rollup.
+        //     Node memory node = IRollupCore(rollupAddress).getNode(_assertionId);
 
-        // Initialize the array to store the assertionIds and confirmData for the batch challenge
-        uint64 [] memory assertionIds = new uint64[](_assertionId - _predecessorAssertionId);
-        bytes32 [] memory batchConfirmData = new bytes32[](_assertionId - _predecessorAssertionId);
-
-        // Loop through the assertions and check if they have been submitted
-        for(uint64 i = _predecessorAssertionId + 1; i <= _assertionId; i++){
-
-            // create the comboHash for the assertionId and rollupAddress
-            bytes32 comboHashBatch = keccak256(abi.encodePacked(i, rollupAddress));
-
-            // check the assertionId and rollupAddress combo haven't been submitted yet
-            require(!rollupAssertionTracker[comboHashBatch], "9");
-
-            // set the comboHash to true to indicate it has been submitted
-            rollupAssertionTracker[comboHashBatch] = true;
-
-            // If assertion checking is active, we need to verify the assertions
-            // Assertion checking would only be disabled if for some reason
-            // the Rollup contract is not available on the network
-            if (isCheckingAssertions) {
-
-                // get the node information for this assertion from the rollup.
-                IRollupCore.Node memory node = rollup.getNode(i);
-
-                // check the _predecessorAssertionId is correct
-                require(node.prevNum == i - 1, "10");   
-
-                // Check the confirmData & timestamp for the assertion
-                if(isBatch){
-
-                    // Store the assertionIds and confirmData for the batch challenge
-                    assertionIds[i - _predecessorAssertionId - 1] = i;
-                    batchConfirmData[i - _predecessorAssertionId - 1] = node.confirmData;
-
-                    // If it is a batch challenge, we need to verify the
-                    // timestamp but only for the last assertionId
-                    if(i == _assertionId){
-                        // Verify Timestamp
-                        require(node.createdAtBlock == _assertionTimestamp, "12");
-                    }
-
-                }else{
-
-                    // Verify individual confirmData
-                    require(node.createdAtBlock == _assertionTimestamp, "12");
-                    require(node.confirmData == _confirmData, "11");
-                }
-                
-            }
-        }
-
-        // If we are handling as a batch challenge, we need to check the confirmData for all assertions
-        if(isBatch){
-            if(isCheckingAssertions){
-                // Hash all of the confirmData for the batch challenge
-                bytes32 confirmHash  = keccak256(abi.encodePacked(batchConfirmData));
-
-                // Confirm the hash matches what was submitted
-                require(_confirmData == confirmHash, "11");
-            }
-            // emit the batch challenge event
-            emit BatchChallenge(challengeCounter, assertionIds);
-        }
-                
+        //     require(node.prevNum == _predecessorAssertionId, "10");
+        //     require(node.confirmData == _confirmData, "11");
+        //     require(node.createdAtBlock == _assertionTimestamp, "12");
+        // }
+        
         // we need to determine how much token will be emitted
         (uint256 challengeEmission,) = calculateChallengeEmissionAndTier();
 
@@ -553,10 +492,8 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
             amountClaimedByClaimers: 0
         });
 
-
-        // emit the event
-        emit ChallengeSubmitted(challengeCounter);
-
+        // emit the events
+        emit ChallengeSubmitted(challengeCounter);   
 
         // increment the challenge counter
         challengeCounter++;
@@ -572,6 +509,61 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
         return challenges[_challengeId];
     }
 
+    /**
+     * @notice Allows users to submit multiple assertions to a challenge for a batch of keys, or for a pool to submit for a batch of keys.
+     * @dev This function was updated to be backwards compatible with the previous implementation, but the submitPoolAssertion function
+     * @dev should be used by pools to submit for multiple keys for gas optimizations.
+     * @dev This function can only be called by the owner of a NodeLicense, Pool Owner(s) or addresses they have approved on this contract.
+     * @param _nodeLicenseIds The IDs of the NodeLicenses.
+     * @param _challengeId The ID of the challenge.
+     * @param _confirmData The confirm data of the assertion. This will change with implementation of BOLD 2
+     */
+
+	function submitMultipleAssertions(
+		uint256[] memory _nodeLicenseIds,
+		uint256 _challengeId,
+		bytes memory _confirmData
+	) public {
+		require(isBeforeBulkState, "_dev01_");
+		require(challenges[_challengeId].openForSubmissions, "16");
+        
+        uint256 keyLength = _nodeLicenseIds.length;
+
+		if (keccak256(abi.encodePacked(_confirmData)) != keccak256(abi.encodePacked(challenges[_challengeId].assertionStateRootOrConfirmData))) {
+            // emit InvalidBatchSubmission(_challengeId, msg.sender, keyLength);
+			return;
+		}
+
+		for (uint256 i = 0; i < keyLength; i++) {
+            uint256 _nodeLicenseId = _nodeLicenseIds[i];
+            if (!submissions[_challengeId][_nodeLicenseId].submitted) {
+                
+                address licenseOwner = NodeLicense(nodeLicenseAddress).ownerOf(_nodeLicenseId);
+                address assignedPool = assignedKeyToPool[_nodeLicenseId];
+
+                if(isValidOperator(licenseOwner, assignedPool)){
+                    _submitAssertion(_nodeLicenseId, _challengeId, _confirmData, licenseOwner, assignedPool);
+                }
+            }
+		}
+	}
+
+    /**
+     * @notice Submits an assertion to a challenge.
+     * @dev This function can only be called by the owner of a NodeLicense or addresses they have approved on this contract.
+     * @param _nodeLicenseId The ID of the NodeLicense.
+     */
+    function submitAssertionToChallenge(
+        uint256 _nodeLicenseId,
+        uint256 _challengeId,
+        bytes memory _confirmData
+    ) public {
+        // Call the internal function to claim the reward
+        uint256[] memory keyIds = new uint256[](1);
+        keyIds[0] = _nodeLicenseId;
+        submitMultipleAssertions(keyIds, _challengeId, _confirmData);
+    }
+
     function isValidOperator(address licenseOwner, address assignedPool) internal view returns (bool) {
         return licenseOwner == msg.sender ||
             isApprovedForOperator(licenseOwner, msg.sender) ||
@@ -579,6 +571,43 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
                 assignedPool != address(0) &&
                 PoolFactory10(poolFactoryAddress).isDelegateOfPoolOrOwner(msg.sender, assignedPool)
             );
+    }
+      
+    function _submitAssertion(uint256 _nodeLicenseId, uint256 _challengeId, bytes memory _confirmData, address licenseOwner, address assignedPool) internal {
+        
+        // Support v1 (no pools) & v2 (pools)
+		uint256 stakedAmount = stakedAmounts[assignedPool];
+		if (assignedPool == address(0)) {
+			stakedAmount = stakedAmounts[licenseOwner];
+			uint256 ownerUnstakedAmount = NodeLicense(nodeLicenseAddress).balanceOf(licenseOwner) - assignedKeysOfUserCount[licenseOwner];
+			if (ownerUnstakedAmount * maxStakeAmountPerLicense < stakedAmount) {
+				stakedAmount = ownerUnstakedAmount * maxStakeAmountPerLicense;
+			}
+		} else {
+			if (assignedKeysToPoolCount[assignedPool] * maxStakeAmountPerLicense < stakedAmount) {
+				stakedAmount = assignedKeysToPoolCount[assignedPool] * maxStakeAmountPerLicense;
+			}
+		}
+
+        // Check the user is actually eligible for receiving a reward, do not count them in numberOfEligibleClaimers if they are not able to receive a reward
+        (bool hashEligible, ) = RefereeCalculations(refereeCalculationsAddress).createAssertionHashAndCheckPayout(_nodeLicenseId, _challengeId, _getBoostFactor(stakedAmount), _confirmData, challenges[_challengeId].challengerSignedHash);
+
+        // Store the assertionSubmission to a map
+        submissions[_challengeId][_nodeLicenseId] = Submission({
+            submitted: true,
+            claimed: false,
+            eligibleForPayout: hashEligible,
+            nodeLicenseId: _nodeLicenseId,
+            assertionStateRootOrConfirmData: _confirmData
+        });
+
+        // Keep track of how many submissions submitted were eligible for the reward
+        if (hashEligible) {
+            challenges[_challengeId].numberOfEligibleClaimers++;
+        }
+
+        // Emit the AssertionSubmitted event
+        emit AssertionSubmitted(_challengeId, _nodeLicenseId);
     }
 
     function _validateChallengeIsClaimable(Challenge memory _challenge) internal pure{
@@ -716,15 +745,9 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
     }
 
     /**
-     * @dev Looks up payout boostFactor based on the staking tier. 
-     * Boostfactor is based with 4 decimals:
-     *      1     => 0.0001%
-     *      100   => 0.01%
-     *      10000 => 1%
-     *      20000 => 2%
-     * The current base chance for no stae is 100 => 0.01%
+     * @dev Looks up payout boostFactor based on the staking tier.
      * @param stakedAmount The staked amount.
-     * @return The payout chance boostFactor.
+     * @return The payout chance boostFactor. 200 for double the chance.
      */
     function _getBoostFactor(uint256 stakedAmount) internal view returns (uint256) {
         if (stakedAmount < stakeAmountTierThresholds[0]) {

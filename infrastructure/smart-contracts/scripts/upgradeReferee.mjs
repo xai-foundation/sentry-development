@@ -1,24 +1,30 @@
 import hardhat from "hardhat";
+import { safeVerify } from "../utils/safeVerify.mjs";
 const { ethers, upgrades } = hardhat;
 //TODO Add current proxy contract address to update
 const address = "0xFaBd7d8D3540254E94811FB33A94537c04D3fEB7";
+const address2 = "0xF84D76755a68bE9DFdab9a0b6d934896Ceab957b";
 
 
 async function main() {
     const [deployer] = (await ethers.getSigners());
     const deployerAddress = await deployer.getAddress();
     console.log("Deployer address", deployerAddress);
-    const referee = await ethers.getContractFactory("contracts/upgrades/referee/NewReferee6.sol:NewReferee6");
+    const Referee16 = await ethers.getContractFactory("contracts/upgrades/referee/Referee16.sol:Referee16");
     console.log("Got factory");
-    await upgrades.upgradeProxy(address, referee);
-    console.log("Upgraded");
 
+    const refereeContract = await upgrades.upgradeProxy(address2, Referee16, { call: { fn: "initialize", args: [34] } });
+    const impAddress = await refereeContract.getAddress();
+    console.log("Address of the upgraded contract", impAddress);
+    console.log("Upgraded Referee16");
+
+    // verify contract
     await run("verify:verify", {
-        address: address,
-        constructorArguments: [],
-        contract: "contracts/upgrades/referee/NewReferee6.sol:NewReferee6"
-    });
-    console.log("verified")
+      address: impAddress,
+      constructorArguments: [],
+      contract: "contracts/upgrades/referee/Referee16.sol:Referee16"
+  });
+  console.log("verified")
 }
 
 // We recommend this pattern to be able to use async/await everywhere
