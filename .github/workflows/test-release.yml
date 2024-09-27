@@ -90,7 +90,6 @@ jobs:
           file_path: release-desktop-windows-latest/sentry-client-windows.exe
           output_path: release-desktop-windows-latest/signed-builds
           malware_block: false
-          environment_name: TEST
       
       - name: Upload signed artifacts
         uses: actions/upload-artifact@v4
