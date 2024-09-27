@@ -124,19 +124,9 @@ contract NodeLicense10 is ERC721EnumerableUpgradeable, AccessControlUpgradeable 
     //  * 
     //  */
 
-    // function initialize(address _xaiAddress,  address _esXaiAddress, address ethPriceFeedAddress, address xaiPriceFeedAddress, address airdropAdmin) public reinitializer(8) {
-    //     require(_xaiAddress != address(0), "Invalid xai address");
-    //     require(_esXaiAddress != address(0), "Invalid esXai address");
-    //     require(ethPriceFeedAddress != address(0), "Invalid ethPriceFeed address");
-    //     require(xaiPriceFeedAddress != address(0), "Invalid xaiPriceFeed address");
-    //     ethPriceFeed = IAggregatorV3Interface(ethPriceFeedAddress);
-    //     xaiPriceFeed = IAggregatorV3Interface(xaiPriceFeedAddress);
-    //     xaiAddress = _xaiAddress;
-    //     esXaiAddress = _esXaiAddress;
-        
-    //     // Grant the airdrop admin role to the airdrop admin address
-    //     _grantRole(AIRDROP_ADMIN_ROLE, airdropAdmin);
-    // }
+    function initialize() public reinitializer(9) {
+        pricingTiers[4] = Tier(5000000000000, 24120);
+    }
 
     /** 
     * @notice Reentrancy guard modifier for the claimReferralReward function
