@@ -80,7 +80,7 @@ const config = {
       gasPrice: 20000000000,
     },
     arbitrumSepolia: {
-      url: "https://arb-sepolia.g.alchemy.com/v2/8aXl_Mw4FGFlgxQO8Jz7FVPh2cg5m2_B",
+      url: "https://arbitrum-sepolia.gateway.tenderly.co",
       accounts: {
         mnemonic: process.env.MNEMONIC,
         count: 30,
