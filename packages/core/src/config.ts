@@ -30,7 +30,10 @@ export let config = {
   "defaultNetworkName": "arbitrumSepolia",
   "subgraphEndpoint": "https://subgraph.satsuma-prod.com/f37507ea64fb/xai/sentry-sepolia/version/0.0.19-sepolia-102/api",
   "publicRPC": "https://arb-sepolia.g.alchemy.com/v2/8aXl_Mw4FGFlgxQO8Jz7FVPh2cg5m2_B",
-  "alchemyApiKey": "8aXl_Mw4FGFlgxQO8Jz7FVPh2cg5m2_B"
+  "alchemyApiKey": "8aXl_Mw4FGFlgxQO8Jz7FVPh2cg5m2_B",
+  "crossmintProjectId": "e1bec541-a95d-4caa-8d1e-6163ab26d754", 
+  "crossmintCollectionId": "eb7239a4-5816-479d-a065-54684543df8f", 
+  "crossmintEnvironment": "staging", //staging/production
 };
 
 export function setConfig(_config: any) { config = _config; }
