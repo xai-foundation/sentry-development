@@ -5,12 +5,12 @@ const address = "0x07C05C6459B0F86A6aBB3DB71C259595d22af3C2";
 
 async function main() {
     const [deployer] = (await ethers.getSigners());
-    // const deployerAddress = await deployer.getAddress();
-    // console.log("Deployer address", deployerAddress);
-    // const NodeLicense = await ethers.getContractFactory("contracts/upgrades/node-license/NodeLicense10.sol:NodeLicense10");
-    // console.log("Got factory");
-    // await upgrades.upgradeProxy(address, NodeLicense, { call: { fn: "initialize", args: [9] } });
-    // console.log("Upgraded");
+    const deployerAddress = await deployer.getAddress();
+    console.log("Deployer address", deployerAddress);
+    const NodeLicense = await ethers.getContractFactory("contracts/upgrades/node-license/NodeLicense10.sol:NodeLicense10");
+    console.log("Got factory");
+    await upgrades.upgradeProxy(address, NodeLicense, { call: { fn: "initialize", args: [10] } });
+    console.log("Upgraded");
 
     await run("verify:verify", {
         address: address,
