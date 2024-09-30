@@ -135,18 +135,6 @@ export function RedEnvelope2024() {
 					</p>
 				)}
 
-				{address && data && chain?.id !== 42161 && (
-				// {address && data && chain.id !== 42170 && (
-					<>
-						<p className="text-lg text-[#525252] max-w-[590px] text-center mt-6">
-							Please switch to Arbitrum One with the button below
-						</p>
-						<div className="m-8">
-							<w3m-button/>
-						</div>
-					</>
-				)}
-
 				{address && data && chain?.id === 42161 && (
 				// {address && data && chain.id === 42170 &&(
 					<>
