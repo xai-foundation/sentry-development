@@ -399,25 +399,8 @@ contract Referee16VersionSwitch is Initializable, AccessControlEnumerableUpgrade
     function calculateChallengeEmissionAndTier() public view returns (uint256, uint256) {
         uint256 totalSupply = getCombinedTotalSupply();  
         uint256 maxSupply = Xai(xaiAddress).MAX_SUPPLY();
-
-        // Get the timestamp of the start of the current challenge
-        uint256 startTs;
-        if (challengeCounter == 0) {
-            startTs = block.timestamp - 3600; //1 hour
-        } else {
-            startTs = challenges[challengeCounter - 1].createdTimestamp;
-        }
-
-        (uint256 emissionsPerHour, uint256 emissionTier)  = RefereeCalculations(refereeCalculationsAddress).calculateChallengeEmissionAndTier(totalSupply, maxSupply);
-
-        // Calculate the time difference in seconds
-        uint256 timePassedInSeconds = block.timestamp - startTs;
-
-        // Calculate the total emissions for the challenge based on the time passed
-        uint256 challengeEmissions = emissionsPerHour * timePassedInSeconds / 3600;
-
-        // determine what the size of the emission is based on each challenge having an estimated static length
-        return (challengeEmissions, emissionTier);
+        uint256 startTs = block.timestamp - 3600; //1 hour
+        return RefereeCalculations(refereeCalculationsAddress).calculateChallengeEmissionAndTier(totalSupply, maxSupply, startTs, block.timestamp);
     }
 
 
@@ -462,8 +445,17 @@ contract Referee16VersionSwitch is Initializable, AccessControlEnumerableUpgrade
         //     require(node.createdAtBlock == _assertionTimestamp, "12");
         // }
         
-        // we need to determine how much token will be emitted
-        (uint256 challengeEmission,) = calculateChallengeEmissionAndTier();
+
+        // Get the timestamp of the start of the current challenge
+        uint256 startTs;
+        if (challengeCounter == 0) {
+            startTs = block.timestamp - 3600; //1 hour
+        } else {
+            startTs = challenges[challengeCounter - 1].createdTimestamp;
+        }
+
+        (uint256 challengeEmission, ) = RefereeCalculations(refereeCalculationsAddress).calculateChallengeEmissionAndTier(getCombinedTotalSupply(), Xai(xaiAddress).MAX_SUPPLY(), startTs, block.timestamp);
+    
 
         // mint part of this for the gas subsidy contract
         uint256 amountForGasSubsidy = (challengeEmission * _gasSubsidyPercentage) / 100;
