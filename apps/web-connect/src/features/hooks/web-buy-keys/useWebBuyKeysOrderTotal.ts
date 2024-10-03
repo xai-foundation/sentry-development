@@ -177,7 +177,6 @@ export function useWebBuyKeysOrderTotal(initialQuantity: number): UseWebBuyKeysO
     };
 
     const getEthButtonText = (): string => {        
-        if (chain?.id !== 42161) return "Please Switch to Arbitrum One";
         if (mintWithEth.isPending || ethMintTx.isLoading) {
             return "WAITING FOR CONFIRMATION...";
         }

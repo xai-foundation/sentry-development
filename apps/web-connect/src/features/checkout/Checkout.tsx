@@ -12,7 +12,7 @@ import { BiLoaderAlt } from "react-icons/bi";
 import PurchaseSuccessful from "./components/PurchaseSuccessful";
 import { useWebBuyKeysContext } from './contexts/useWebBuyKeysContext';
 
-export const stakingPageURL = "https://app.xai.games/staking?modal=true&page=1&showKeys=true&hideFull=true&sort=tierIndex&sortOrder=-1";
+export const stakingPageURL = "https://develop.app.xai.games/staking?modal=true&page=1&showKeys=true&hideFull=true&sort=tierIndex&sortOrder=-1";
 
 const LoadingState = () => (
     <div className="w-full h-[365px] flex flex-col justify-center items-center gap-2">

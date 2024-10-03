@@ -79,6 +79,7 @@ jobs:
 
       - name: Upload sentry-client-desktop artifacts
         uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4
         with:
           name: release-desktop-${{ matrix.os }}
           path: apps/sentry-client-desktop/release
@@ -108,9 +109,9 @@ jobs:
           name: release-desktop-windows-latest
           path: release-desktop-windows-latest
 
-      - name: Create directory for signed builds
-        shell: bash
-        run: mkdir release-desktop-windows-latest/signed-builds
+  #     - name: Create directory for signed builds
+  #       shell: bash
+  #       run: mkdir release-desktop-windows-latest/signed-builds
 
       - name: Sign build Windows exe
         uses: sslcom/esigner-codesign@develop
@@ -130,7 +131,7 @@ jobs:
           path: release-desktop-windows-latest
 
   checksum-and-release:
-    needs: sign
+    needs: build
     runs-on: macos-latest
 
     steps:
@@ -139,15 +140,16 @@ jobs:
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4
 
       - name: Generate checksum
         run: |
-          CHECKSUM=$(shasum -a 512 release-signed-desktop-windows-latest/signed-builds/sentry-client-windows.exe | cut -f1 -d\ | xxd -r -p | base64)
+          CHECKSUM=$(shasum -a 512 release-desktop-windows-latest/sentry-client-windows.exe | cut -f1 -d\ | xxd -r -p | base64)
           CHECKSUM=$(echo "$CHECKSUM" | tr -d '\r\n')
           echo "SHA512 Checksum: $CHECKSUM"
-          cat release-signed-desktop-windows-latest/latest.yml
-          sed -i '' -e "s#^sha512:.*#sha512: $CHECKSUM#" "release-signed-desktop-windows-latest/latest.yml"
-          sed -i '' -e "s#^    sha512:.*#    sha512: $CHECKSUM#" "release-signed-desktop-windows-latest/latest.yml"
+          cat release-desktop-windows-latest/latest.yml
+          sed -i '' -e "s#^sha512:.*#sha512: $CHECKSUM#" "release-desktop-windows-latest/latest.yml"
+          sed -i '' -e "s#^    sha512:.*#    sha512: $CHECKSUM#" "release-desktop-windows-latest/latest.yml"
 
       # Run semantic-release after the build is completed to publish the release
       - name: Semantic Release
