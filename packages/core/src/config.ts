@@ -29,7 +29,7 @@ export let config = {
   "poolFactoryAddress": "0x87Ae2373007C01FBCED0dCCe4a23CA3f17D1fA9A",
   "poolFactoryAddressImplementationAddress": "0x87Ae2373007C01FBCED0dCCe4a23CA3f17D1fA9A",
   "defaultNetworkName": "arbitrumSepolia",
-  "subgraphEndpoint": "https://subgraph.satsuma-prod.com/f37507ea64fb/xai/sentry-sepolia/version/0.0.19-sepolia-102/api",
+  "subgraphEndpoint": "https://subgraph.satsuma-prod.com/f37507ea64fb/xai/sentry-sepolia/version/0.0.25-sepolia-mock-103/api",
   "publicRPC": "https://arb-sepolia.g.alchemy.com/v2/8aXl_Mw4FGFlgxQO8Jz7FVPh2cg5m2_B",
   "alchemyApiKey": "8aXl_Mw4FGFlgxQO8Jz7FVPh2cg5m2_B",
   "crossmintProjectId": "cc616c84-6479-4981-a24e-adb4278df212", //TODO Add Production Values
