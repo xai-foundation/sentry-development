@@ -9,7 +9,7 @@ async function main() {
     console.log("Deployer address", deployerAddress);
     const NodeLicense = await ethers.getContractFactory("contracts/upgrades/node-license/NodeLicense10.sol:NodeLicense10");
     console.log("Got factory");
-    await upgrades.upgradeProxy(address, NodeLicense, { call: { fn: "initialize", args: [11] } });
+    await upgrades.upgradeProxy(address, NodeLicense, { call: { fn: "initialize", args: [13] } });
     console.log("Upgraded");
 
     await run("verify:verify", {

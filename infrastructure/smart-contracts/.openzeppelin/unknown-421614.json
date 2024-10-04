@@ -60822,7 +60822,7 @@
             "label": "pricingTiers",
             "offset": 0,
             "slot": "254",
-            "type": "t_array(t_struct(Tier)14552_storage)dyn_storage",
+            "type": "t_array(t_struct(Tier)19588_storage)dyn_storage",
             "contract": "NodeLicense10",
             "src": "contracts\\upgrades\\node-license\\NodeLicense10.sol:26"
           },
@@ -60862,7 +60862,7 @@
             "label": "_promoCodes",
             "offset": 0,
             "slot": "259",
-            "type": "t_mapping(t_string_memory_ptr,t_struct(PromoCode)14559_storage)",
+            "type": "t_mapping(t_string_memory_ptr,t_struct(PromoCode)19595_storage)",
             "contract": "NodeLicense10",
             "src": "contracts\\upgrades\\node-license\\NodeLicense10.sol:38"
           },
@@ -60894,7 +60894,7 @@
             "label": "_promoCodesXai",
             "offset": 0,
             "slot": "263",
-            "type": "t_mapping(t_string_memory_ptr,t_struct(PromoCode)14559_storage)",
+            "type": "t_mapping(t_string_memory_ptr,t_struct(PromoCode)19595_storage)",
             "contract": "NodeLicense10",
             "src": "contracts\\upgrades\\node-license\\NodeLicense10.sol:61"
           },
@@ -60902,7 +60902,7 @@
             "label": "_promoCodesEsXai",
             "offset": 0,
             "slot": "264",
-            "type": "t_mapping(t_string_memory_ptr,t_struct(PromoCode)14559_storage)",
+            "type": "t_mapping(t_string_memory_ptr,t_struct(PromoCode)19595_storage)",
             "contract": "NodeLicense10",
             "src": "contracts\\upgrades\\node-license\\NodeLicense10.sol:64"
           },
@@ -60926,7 +60926,7 @@
             "label": "ethPriceFeed",
             "offset": 0,
             "slot": "267",
-            "type": "t_contract(IAggregatorV3Interface)14455",
+            "type": "t_contract(IAggregatorV3Interface)19491",
             "contract": "NodeLicense10",
             "src": "contracts\\upgrades\\node-license\\NodeLicense10.sol:73"
           },
@@ -60934,7 +60934,7 @@
             "label": "xaiPriceFeed",
             "offset": 0,
             "slot": "268",
-            "type": "t_contract(IAggregatorV3Interface)14455",
+            "type": "t_contract(IAggregatorV3Interface)19491",
             "contract": "NodeLicense10",
             "src": "contracts\\upgrades\\node-license\\NodeLicense10.sol:76"
           },
@@ -60988,7 +60988,7 @@
             "label": "address payable",
             "numberOfBytes": "20"
           },
-          "t_array(t_struct(Tier)14552_storage)dyn_storage": {
+          "t_array(t_struct(Tier)19588_storage)dyn_storage": {
             "label": "struct NodeLicense10.Tier[]",
             "numberOfBytes": "32"
           },
@@ -61024,7 +61024,7 @@
             "label": "bytes32",
             "numberOfBytes": "32"
           },
-          "t_contract(IAggregatorV3Interface)14455": {
+          "t_contract(IAggregatorV3Interface)19491": {
             "label": "contract IAggregatorV3Interface",
             "numberOfBytes": "20"
           },
@@ -61052,7 +61052,7 @@
             "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_string_memory_ptr,t_struct(PromoCode)14559_storage)": {
+          "t_mapping(t_string_memory_ptr,t_struct(PromoCode)19595_storage)": {
             "label": "mapping(string => struct NodeLicense10.PromoCode)",
             "numberOfBytes": "32"
           },
@@ -61084,7 +61084,7 @@
             ],
             "numberOfBytes": "32"
           },
-          "t_struct(PromoCode)14559_storage": {
+          "t_struct(PromoCode)19595_storage": {
             "label": "struct NodeLicense10.PromoCode",
             "members": [
               {
@@ -61126,7 +61126,7 @@
             ],
             "numberOfBytes": "64"
           },
-          "t_struct(Tier)14552_storage": {
+          "t_struct(Tier)19588_storage": {
             "label": "struct NodeLicense10.Tier",
             "members": [
               {
@@ -62153,7 +62153,7 @@
             "label": "pricingTiers",
             "offset": 0,
             "slot": "254",
-            "type": "t_array(t_struct(Tier)19559_storage)dyn_storage",
+            "type": "t_array(t_struct(Tier)14552_storage)dyn_storage",
             "contract": "NodeLicense10",
             "src": "contracts\\upgrades\\node-license\\NodeLicense10.sol:26"
           },
@@ -62193,7 +62193,7 @@
             "label": "_promoCodes",
             "offset": 0,
             "slot": "259",
-            "type": "t_mapping(t_string_memory_ptr,t_struct(PromoCode)19566_storage)",
+            "type": "t_mapping(t_string_memory_ptr,t_struct(PromoCode)14559_storage)",
             "contract": "NodeLicense10",
             "src": "contracts\\upgrades\\node-license\\NodeLicense10.sol:38"
           },
@@ -62225,7 +62225,7 @@
             "label": "_promoCodesXai",
             "offset": 0,
             "slot": "263",
-            "type": "t_mapping(t_string_memory_ptr,t_struct(PromoCode)19566_storage)",
+            "type": "t_mapping(t_string_memory_ptr,t_struct(PromoCode)14559_storage)",
             "contract": "NodeLicense10",
             "src": "contracts\\upgrades\\node-license\\NodeLicense10.sol:61"
           },
@@ -62233,7 +62233,7 @@
             "label": "_promoCodesEsXai",
             "offset": 0,
             "slot": "264",
-            "type": "t_mapping(t_string_memory_ptr,t_struct(PromoCode)19566_storage)",
+            "type": "t_mapping(t_string_memory_ptr,t_struct(PromoCode)14559_storage)",
             "contract": "NodeLicense10",
             "src": "contracts\\upgrades\\node-license\\NodeLicense10.sol:64"
           },
@@ -62257,7 +62257,7 @@
             "label": "ethPriceFeed",
             "offset": 0,
             "slot": "267",
-            "type": "t_contract(IAggregatorV3Interface)19462",
+            "type": "t_contract(IAggregatorV3Interface)14455",
             "contract": "NodeLicense10",
             "src": "contracts\\upgrades\\node-license\\NodeLicense10.sol:73"
           },
@@ -62265,7 +62265,7 @@
             "label": "xaiPriceFeed",
             "offset": 0,
             "slot": "268",
-            "type": "t_contract(IAggregatorV3Interface)19462",
+            "type": "t_contract(IAggregatorV3Interface)14455",
             "contract": "NodeLicense10",
             "src": "contracts\\upgrades\\node-license\\NodeLicense10.sol:76"
           },
@@ -62319,7 +62319,7 @@
             "label": "address payable",
             "numberOfBytes": "20"
           },
-          "t_array(t_struct(Tier)19559_storage)dyn_storage": {
+          "t_array(t_struct(Tier)14552_storage)dyn_storage": {
             "label": "struct NodeLicense10.Tier[]",
             "numberOfBytes": "32"
           },
@@ -62355,7 +62355,7 @@
             "label": "bytes32",
             "numberOfBytes": "32"
           },
-          "t_contract(IAggregatorV3Interface)19462": {
+          "t_contract(IAggregatorV3Interface)14455": {
             "label": "contract IAggregatorV3Interface",
             "numberOfBytes": "20"
           },
@@ -62383,7 +62383,7 @@
             "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_string_memory_ptr,t_struct(PromoCode)19566_storage)": {
+          "t_mapping(t_string_memory_ptr,t_struct(PromoCode)14559_storage)": {
             "label": "mapping(string => struct NodeLicense10.PromoCode)",
             "numberOfBytes": "32"
           },
@@ -62415,7 +62415,7 @@
             ],
             "numberOfBytes": "32"
           },
-          "t_struct(PromoCode)19566_storage": {
+          "t_struct(PromoCode)14559_storage": {
             "label": "struct NodeLicense10.PromoCode",
             "members": [
               {
@@ -62457,7 +62457,7 @@
             ],
             "numberOfBytes": "64"
           },
-          "t_struct(Tier)19559_storage": {
+          "t_struct(Tier)14552_storage": {
             "label": "struct NodeLicense10.Tier",
             "members": [
               {
