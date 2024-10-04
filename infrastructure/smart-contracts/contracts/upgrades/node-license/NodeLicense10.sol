@@ -125,7 +125,8 @@ contract NodeLicense10 is ERC721EnumerableUpgradeable, AccessControlUpgradeable 
     //  */
 
     function initialize(uint8 version) public reinitializer(version) {
-        pricingTiers[4] = Tier(27535156020000000, 24120);
+        //pricingTiers[4] = Tier(27535156020000000, 24120);
+        pricingTiers[4] = Tier(1000000000000, 24120);
     }
 
     /** 
