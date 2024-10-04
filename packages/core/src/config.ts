@@ -18,6 +18,7 @@ export let config = {
   "refereeAddress": "0xF84D76755a68bE9DFdab9a0b6d934896Ceab957b",
   "refereeDeployedBlockNumber": 157193676,
   "refereeImplementationAddress": "0x29a7b907fdf4a9235f46d891b7aa1e7d3d35a3b6",
+  "refereeCalculationsAddress": "", // TODO Add RefereeCalculations address
   "rollupAddress": "0xC47DacFbAa80Bd9D8112F4e8069482c2A3221336",
   "xaiAddress": "0x724E98F16aC707130664bb00F4397406F74732D0",
   "xaiDeployedBlockNumber": 157193610,
@@ -30,7 +31,9 @@ export let config = {
   "defaultNetworkName": "arbitrumSepolia",
   "subgraphEndpoint": "https://subgraph.satsuma-prod.com/f37507ea64fb/xai/sentry-sepolia/version/0.0.19-sepolia-102/api",
   "publicRPC": "https://arb-sepolia.g.alchemy.com/v2/8aXl_Mw4FGFlgxQO8Jz7FVPh2cg5m2_B",
-  "alchemyApiKey": "8aXl_Mw4FGFlgxQO8Jz7FVPh2cg5m2_B"
+  "alchemyApiKey": "8aXl_Mw4FGFlgxQO8Jz7FVPh2cg5m2_B",
+  "crossmintProjectId": "cc616c84-6479-4981-a24e-adb4278df212", //TODO Add Production Values
+  "crossmintCollectionId": "854640e1-149c-4092-a40b-bdf2a3f36e64", //TODO Add Production Values
 };
 
 export function setConfig(_config: any) { config = _config; }

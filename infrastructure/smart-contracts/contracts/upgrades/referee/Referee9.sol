@@ -393,10 +393,7 @@ contract Referee9 is Initializable, AccessControlEnumerableUpgradeable {
     function calculateChallengeEmissionAndTier() public view returns (uint256, uint256) {
         uint256 totalSupply = getCombinedTotalSupply();  
         uint256 maxSupply = Xai(xaiAddress).MAX_SUPPLY();
-
-        // Get the timestamp of the start of the current challenge
-        uint256 startTs = challenges[challengeCounter - 1].assertionTimestamp;
-
+        uint256 startTs = block.timestamp - 3600; //1 hour
         return RefereeCalculations(refereeCalculationsAddress).calculateChallengeEmissionAndTier(totalSupply, maxSupply, startTs, block.timestamp);
     }
 
@@ -425,8 +422,7 @@ contract Referee9 is Initializable, AccessControlEnumerableUpgradeable {
         // check the challengerPublicKey is set
         require(challengerPublicKey.length != 0, "8");
 
-        // Connect to the rollup contract
-        IRollupCore rollup = IRollupCore(rollupAddress);
+        require(_assertionId > _predecessorAssertionId, "9");
 
         // If the gap is more than 1 assertion, we need to handle as a batch challenge
         bool isBatch = _assertionId - _predecessorAssertionId > 1;
@@ -453,7 +449,7 @@ contract Referee9 is Initializable, AccessControlEnumerableUpgradeable {
             if (isCheckingAssertions) {
 
                 // get the node information for this assertion from the rollup.
-                Node memory node = rollup.getNode(i);
+                Node memory node = IRollupCore(rollupAddress).getNode(i);
 
                 // check the _predecessorAssertionId is correct
                 require(node.prevNum == i - 1, "10");   
@@ -494,10 +490,17 @@ contract Referee9 is Initializable, AccessControlEnumerableUpgradeable {
             // emit the batch challenge event
             emit BatchChallenge(challengeCounter, assertionIds);
         }
-                
-        // we need to determine how much token will be emitted
-        (uint256 challengeEmission,) = calculateChallengeEmissionAndTier();
 
+        // Get the timestamp of the start of the current challenge
+        uint256 startTs;
+        if (challengeCounter == 0) {
+            startTs = block.timestamp - 3600; //1 hour
+        } else {
+            startTs = challenges[challengeCounter - 1].createdTimestamp;
+        }
+
+        (uint256 challengeEmission, ) = RefereeCalculations(refereeCalculationsAddress).calculateChallengeEmissionAndTier(getCombinedTotalSupply(), Xai(xaiAddress).MAX_SUPPLY(), startTs, block.timestamp);
+    
         // mint part of this for the gas subsidy contract
         uint256 amountForGasSubsidy = (challengeEmission * _gasSubsidyPercentage) / 100;
 
@@ -720,7 +723,6 @@ contract Referee9 is Initializable, AccessControlEnumerableUpgradeable {
         }
         return stakeAmountBoostFactors[length - 1];
     }
-
 
     /**
      * @dev Looks up payout boostFactor based on the staking tier for a staker wallet.
@@ -945,13 +947,13 @@ contract Referee9 is Initializable, AccessControlEnumerableUpgradeable {
         // Emit the Updated Pool Submission event
         emit UpdateBulkSubmission(_challengeId, _bulkAddress, numberOfKeys, winningKeyCount, winningKeysIncreaseAmount, winningKeysDecreaseAmount);	
 	}
+
     /** 
     * @notice Function to check if challenge rewards are expired
     * @dev This function is called internally from the claimReward function.
     * @param _challengeId The ID of the challenge.
     * @return A boolean indicating if the challenge rewards are expired.
     */
-
     function _checkChallengeRewardsExpired(uint256 _challengeId) internal returns (bool) {
         // Check if the challenge rewards have expired
         bool expired = block.timestamp >= challenges[_challengeId].createdTimestamp + 270 days;
@@ -1112,4 +1114,16 @@ contract Referee9 is Initializable, AccessControlEnumerableUpgradeable {
 			}
 		}
     }
+
+    //TEST FUNCTION this is used only for test coverage
+    // function toggleAssertionChecking() public {
+    //     isCheckingAssertions = !isCheckingAssertions;
+    //     emit AssertionCheckingToggled(isCheckingAssertions);
+    // }
+
+    //TEST FUNCTION this is used only for test coverage
+    // function setRollupAddress(address newRollupAddress) public {
+    //     rollupAddress = newRollupAddress;
+    //     emit RollupAddressChanged(newRollupAddress);
+    // }
 }

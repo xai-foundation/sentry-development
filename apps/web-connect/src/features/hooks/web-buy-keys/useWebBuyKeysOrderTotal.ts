@@ -173,7 +173,7 @@ export function useWebBuyKeysOrderTotal(initialQuantity: number): UseWebBuyKeysO
             return `Approve ${currency}`;
         }
 
-        return "BUY NOW";
+        return "PURCHASE NOW";
     };
 
     const getEthButtonText = (): string => {        
@@ -185,7 +185,7 @@ export function useWebBuyKeysOrderTotal(initialQuantity: number): UseWebBuyKeysO
             return "Insufficient ETH balance";
         }
 
-        return "BUY NOW";
+        return "MINT NOW";
     };
 
     /**
