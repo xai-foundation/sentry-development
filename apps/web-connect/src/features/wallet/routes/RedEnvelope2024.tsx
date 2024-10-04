@@ -1,4 +1,5 @@
-import {useAccount, useContractRead, useNetwork} from "wagmi";
+import {useAccount, useReadContract } from "wagmi";
+import {wagmiConfig, chains} from "../../../main";
 import {useListNodeLicenses} from "@/hooks/useListNodeLicenses";
 import {BiLoaderAlt} from "react-icons/bi";
 import {useEffect, useState} from "react";
@@ -7,13 +8,17 @@ import {useBlockIp} from "@/hooks/useBlockIp";
 import {FaCircleCheck, FaCircleXmark} from "react-icons/fa6";
 import {Link} from "react-router-dom";
 import { config } from "@sentry/core";
+import { getAccount } from '@wagmi/core'
+import IpBlockText from "@sentry/ui/src/rebrand/text/IpBlockText";
 
 export function RedEnvelope2024() {
 	const {blocked, loading: loadingGeo} = useBlockIp({blockUsa: true});
 
 	const {address} = useAccount();
 	console.log("address:", address);
-	const {chain} = useNetwork();
+
+	const { chainId } = getAccount(wagmiConfig);
+	const chain = chains.find(chain => chain.id === chainId)
 	console.log("chain:", chain);
 
 	// check license balance
@@ -46,17 +51,13 @@ export function RedEnvelope2024() {
 		setKycStatus(res[0]);
 	}
 
-	const {data: isTwitterPostSubmittedData} = useContractRead({
+	const {data: isTwitterPostSubmittedData} = useReadContract ({
 		address: config.xaiRedEnvelope2024Address as `0x${string}`,
 		abi: xaiRedEnvelopeAbi,
 		functionName: "userXPostVerifications",
-		args: [address],
-		watch: true,
-		enabled: !!address,
-		onError(error) {
-			console.warn("isTwitterPostSubmittedData Error", error);
-		},
+		args: [address]	
 	});
+	
 	console.log("isTwitterPostSubmittedData:", isTwitterPostSubmittedData)
 
 	// const {isLoading: isSubmitClaimRequestLoading, write, error, isSuccess: isSubmitClaimRequestSuccess} = useContractWrite({
@@ -80,7 +81,7 @@ export function RedEnvelope2024() {
 	if (blocked) {
 		return (
 			<div className='w-full h-screen flex justify-center items-center'>
-				<p className="p-2 text-md text-white">You are in a country restricted from using this application.</p>
+				<IpBlockText classNames="p-2 text-md text-white" />
 			</div>
 		);
 	}
@@ -132,18 +133,6 @@ export function RedEnvelope2024() {
 					<p className="text-lg text-[#525252] max-w-[590px] text-center mt-6">
 						Loading...
 					</p>
-				)}
-
-				{address && data && chain?.id !== 42161 && (
-				// {address && data && chain.id !== 42170 && (
-					<>
-						<p className="text-lg text-[#525252] max-w-[590px] text-center mt-6">
-							Please switch to Arbitrum One with the button below
-						</p>
-						<div className="m-8">
-							<w3m-button/>
-						</div>
-					</>
 				)}
 
 				{address && data && chain?.id === 42161 && (
