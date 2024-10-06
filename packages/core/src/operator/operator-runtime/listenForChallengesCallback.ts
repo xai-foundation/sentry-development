@@ -16,11 +16,13 @@ export async function listenForChallengesCallback(challengeNumber: bigint, chall
         setTimeout(resolve, delay * 1000);
     })
 
+    operatorState.cachedLogger(`Received new challenge with number: ${challengeNumber}. Delayed challenges will still accrue rewards.`);
+
     const graphStatus = await getSubgraphHealthStatus();
 
     operatorState.cachedLogger(`Validating confirm data...`);
 
-    const stateToPass = { 
+    const stateToPass = {
         previousChallengeAssertionId: operatorState.previousChallengeAssertionId,
         challengerPublicKey: operatorState.challengerPublicKey,
         onAssertionMissMatchCb: operatorState.onAssertionMissMatchCb,
@@ -28,13 +30,15 @@ export async function listenForChallengesCallback(challengeNumber: bigint, chall
         refereeCalculationsAddress: operatorState.refereeCalculationsAddress
     };
 
-    await validateConfirmData(challenge, graphStatus.healthy, stateToPass, event);
+    const validateSuccess = await validateConfirmData(challenge, graphStatus.healthy, stateToPass, event);
+    if (validateSuccess) {
+        operatorState.cachedLogger(`Validation finished successfully.`);
+    } else {
+        operatorState.cachedLogger(`Validation finished with error!`);
+    }
 
     operatorState.previousChallengeAssertionId = challenge.assertionId;
 
-    operatorState.cachedLogger(`Comparison between PublicNode and Challenger was successful.`);
-
-    operatorState.cachedLogger(`Received new challenge with number: ${challengeNumber}. Delayed challenges will still accrue rewards.`);
     operatorState.cachedLogger(`Processing challenge...`);
 
     try {

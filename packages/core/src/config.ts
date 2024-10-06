@@ -19,7 +19,7 @@ export let config = {
   "refereeDeployedBlockNumber": 157193676,
   "refereeImplementationAddress": "0x29a7b907fdf4a9235f46d891b7aa1e7d3d35a3b6",
   "refereeCalculationsAddress": "", // TODO Add RefereeCalculations address
-  "rollupAddress": "0xC47DacFbAa80Bd9D8112F4e8069482c2A3221336",
+  "rollupAddress": "0xb3b08bE5041d3F94C9fD43c91434515a184a43af",
   "xaiAddress": "0x724E98F16aC707130664bb00F4397406F74732D0",
   "xaiDeployedBlockNumber": 157193610,
   "xaiImplementationAddress": "0x3fb787101dc6be47cfe18aeee15404dcc842e6af",
