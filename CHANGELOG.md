@@ -1,3 +1,11 @@
+## [1.2.1](https://github.com/xai-foundation/sentry-development/compare/1.2.0...1.2.1) (2024-10-06)
+
+
+### Bug Fixes
+
+* **cli, desktop:** Update logs on challnge validations ([bc402c8](https://github.com/xai-foundation/sentry-development/commit/bc402c8b90391032d0421d0015cfee8cd4a206e5))
+* **operator:** Fix print error on validation fail ([beb9736](https://github.com/xai-foundation/sentry-development/commit/beb9736c3d8b37466180e59e2ba7ae24ec3b857e))
+
 # [1.2.0](https://github.com/xai-foundation/sentry-development/compare/1.1.14...1.2.0) (2024-10-06)
 
 
