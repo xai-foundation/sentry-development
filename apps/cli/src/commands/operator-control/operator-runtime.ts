@@ -35,7 +35,7 @@ export function bootOperator(cli: Command): void {
             if (!walletKey || walletKey.length < 1) {
                 throw new Error("No private key passed in. Please provide a valid private key.");
             }
-            
+
             let signer: Signer;
             try {
                 signer = getSignerFromPrivateKey(walletKey).signer;
@@ -43,6 +43,13 @@ export function bootOperator(cli: Command): void {
                 console.error(`Error getting signer from private key: ${(error as Error).message}`);
                 return;
             }
+
+            const { startFromGraph } = await inquirer.prompt({
+                type: 'confirm',
+                name: 'startFromGraph',
+                message: 'DEV MODE - Do you want boot the operator from the graph (will alternate between graph and RPC during runtime) ?',
+                default: true
+            });
 
             // Prompt user whether to use a whitelist for the operator runtime
             const { useWhitelist } = await inquirer.prompt({
@@ -59,8 +66,7 @@ export function bootOperator(cli: Command): void {
                     const operatorAddress = await signer.getAddress();
                     const choices: Array<{ name: string, value: string }> = [];
 
-                    const graphStatus = await getSubgraphHealthStatus();
-                    if (graphStatus.healthy) { // Fetch from subgraph
+                    if (startFromGraph) { // Fetch from subgraph
                         const { wallets, pools } = await getSentryWalletsForOperator(operatorAddress);
                         wallets.forEach(w => {
                             choices.push({
@@ -75,6 +81,7 @@ export function bootOperator(cli: Command): void {
                             });
                         });
                     } else { // Fetch from RPC
+                        await getSubgraphHealthStatus();
                         const res = await loadOperatorWalletsFromRPC(operatorAddress);
                         res.forEach(a => {
                             if (a.isPool) {
@@ -111,7 +118,7 @@ export function bootOperator(cli: Command): void {
                 } catch (error) {
                     console.error(`Error getting operator wallets: ${(error as Error).message}`);
                     return;
-                    
+
                 }
             }
 
@@ -135,7 +142,8 @@ export function bootOperator(cli: Command): void {
                         `${JSON.stringify(challenge, null, 2)}\n`;
 
                     console.error(errorMessage);
-                }
+                },
+                startFromGraph
             );
 
             // Listen for process termination and call the handler
@@ -148,6 +156,6 @@ export function bootOperator(cli: Command): void {
             });
 
             // Keep the command running
-            await new Promise(resolve => {});
+            await new Promise(resolve => { });
         });
 }

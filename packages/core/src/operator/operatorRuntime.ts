@@ -79,8 +79,8 @@ export async function operatorRuntime(
     statusCallback: (status: NodeLicenseStatusMap) => void = (_) => { },
     logFunction: (log: string) => void = (_) => { },
     operatorOwners?: string[],
-    onAssertionMissMatch: (publicNodeData: PublicNodeBucketInformation | undefined, challenge: Challenge, message: string) => void = (_) => { }
-
+    onAssertionMissMatch: (publicNodeData: PublicNodeBucketInformation | undefined, challenge: Challenge, message: string) => void = (_) => { },
+    startFromGraph: boolean = true
 ): Promise<() => Promise<void>> {
 
     operatorState.cachedLogger = logFunction;
@@ -105,7 +105,7 @@ export async function operatorRuntime(
     operatorState.operatorAddress = await signer.getAddress();
     logFunction(`Fetched address of operator ${operatorState.operatorAddress}.`);
 
-    let closeChallengeListener = await bootOperatorRuntime(logFunction);
+    let closeChallengeListener = await bootOperatorRuntime(logFunction, startFromGraph);
     logFunction(`Started listener for new challenges.`);
 
     const fetchBlockNumber = async () => {
