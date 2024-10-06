@@ -1,4 +1,4 @@
-import { Challenge, config, getConfirmDataAndHash, PublicNodeBucketInformation, verifyChallengerSignedHash } from "../../index.js";
+import { Challenge, config, getConfirmDataAndHash, PublicNodeBucketInformation, retry, verifyChallengerSignedHash } from "../../index.js";
 import axios from "axios";
 import { ethers } from "ethers";
 
@@ -34,7 +34,7 @@ export async function validateConfirmData(
 
             if (isBatch) {   
                 try {
-                    const { confirmData, confirmHash } = await getConfirmDataAndHash(assertionIds, subgraphIsHealthy, operatorState.refereeCalculationsAddress);
+                    const { confirmData, confirmHash } = await retry(() => getConfirmDataAndHash(assertionIds, subgraphIsHealthy, operatorState.refereeCalculationsAddress), 3);
                     confirmDataList = confirmData;                                                                      // Set the confirm data list  
                     if(confirmHash !== currentChallenge.assertionStateRootOrConfirmData){
                         const errorMessage = `Mismatch of challenge confirmData detected please check the confirmData between Rollup and Referee - ${currentChallenge.assertionStateRootOrConfirmData}!`;

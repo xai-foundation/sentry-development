@@ -30,12 +30,16 @@ export async function listenForChallengesCallback(challengeNumber: bigint, chall
         refereeCalculationsAddress: operatorState.refereeCalculationsAddress
     };
 
-    const validateSuccess = await validateConfirmData(challenge, graphStatus.healthy, stateToPass, event);
-    if (validateSuccess) {
-        operatorState.cachedLogger(`Validation finished successfully.`);
-    } else {
-        operatorState.cachedLogger(`Validation finished with error!`);
-    }
+    validateConfirmData(challenge, graphStatus.healthy, stateToPass, event)
+        .then(validateSuccess => {
+            if (validateSuccess) {
+                operatorState.cachedLogger(`Validation finished successfully.`);
+            } else {
+                operatorState.cachedLogger(`===============================================`);
+                operatorState.cachedLogger(`Validation finished with errors!`);
+                operatorState.cachedLogger(`===============================================`);
+            }
+        });
 
     operatorState.previousChallengeAssertionId = challenge.assertionId;
 
