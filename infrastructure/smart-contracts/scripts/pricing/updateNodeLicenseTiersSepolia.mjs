@@ -31,7 +31,9 @@ async function main() {
     for (const tier of tiers) {
         console.log("Tier", tier);
         console.log(`Adding tier ${tier.tierIndex} with unit cost ${(Number(tier.unitCostInEth) / 100).toString()} and quantity ${Number(tier.quantityBeforeNextTier) * 100} to NodeLicense`);
-        const tx = await nodeLicense.setOrAddPricingTier(tier.tierIndex, ethers.parseEther((Number(tier.unitCostInEth) / 100).toFixed(18)), (Number(tier.quantityBeforeNextTier) * 100));
+        const newPrice = BigInt(Number(tier.unitCostInEth) / 100);
+        console.log("New price", newPrice);
+        const tx = await nodeLicense.setOrAddPricingTier(tier.tierIndex, newPrice, (Number(tier.quantityBeforeNextTier) * 100));
         await tx.wait(1);
         console.log(`Added tier ${tier.tierIndex} to NodeLicense`);
         tiersJSON.push({
