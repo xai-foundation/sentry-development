@@ -28,8 +28,8 @@ async function getPricingTierDataAndWriteJSON() {
     // Loop through each tier and retrieve the data
     for (let i = 0; i < numberOfTiers; i++) {
         const tierData = await nodeLicense.getPricingTier(i);
-        const quantity = (tierData.quantity * 100n).toString();
-        const price = (tierData.price / 100n).toString();
+        const quantity = (tierData.quantity).toString();
+        const price = (tierData.price).toString();
         pricingData.push({ price, quantity });
     }
 
