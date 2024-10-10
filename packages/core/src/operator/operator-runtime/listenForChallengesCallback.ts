@@ -18,6 +18,8 @@ export async function listenForChallengesCallback(challengeNumber: bigint, chall
 
     operatorState.cachedLogger(`Received new challenge with number: ${challengeNumber}. Delayed challenges will still accrue rewards.`);
 
+    operatorState.cachedLogger(`Received new challenge with number: ${challengeNumber}. Delayed challenges will still accrue rewards.`);
+
     const graphStatus = await getSubgraphHealthStatus();
 
     operatorState.cachedLogger(`Validating confirm data...`);

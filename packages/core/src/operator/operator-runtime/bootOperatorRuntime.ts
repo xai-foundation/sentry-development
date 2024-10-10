@@ -40,7 +40,7 @@ export const bootOperatorRuntime = async (
         closeChallengeListener = listenForChallenges(listenForChallengesCallback)
 
         const openChallenge = await retry(() => getLatestChallengeFromGraph());
-        
+
         operatorState.previousChallengeAssertionId = openChallenge.assertionId;
 
         // Calculate the latest challenge we should load from the graph
@@ -56,7 +56,7 @@ export const bootOperatorRuntime = async (
         // If the referee is V2
         if (refereeIsV2) {
             // If referee calculations address is not set, set it
-            if(operatorState.refereeCalculationsAddress === ""){
+            if (operatorState.refereeCalculationsAddress === "") {
                 try {
                     operatorState.refereeCalculationsAddress = await getRefereeCalculationsAddress();
                 } catch (error) {
@@ -124,22 +124,22 @@ export const bootOperatorRuntime = async (
     } else {
         closeChallengeListener = listenForChallenges(listenForChallengesCallback)
         // If the subgraph is not healthy
-        operatorState.cachedLogger(`Revert to RPC call instead of using subgraph. Subgraph status error: DEV MODE ALTERNATE HEALTH`)
+        operatorState.cachedLogger(`Revert to RPC call instead of using subgraph. Subgraph status error: ${graphStatus.error}`);
 
         // Check if the referee has been upgraded to V2
         const refereeIsV2 = await checkRefereeBulkSubmissionCompatible();
 
         // Get the latest challenge from the RPC
         const [latestChallengeNumber, latestChallenge] = await getLatestChallenge();
-        
+
         operatorState.previousChallengeAssertionId = latestChallenge.assertionId;
-        
+
         logFunction(`Processing open challenges. Challenges should occur roughly once per hour. Rewards will still accrue even if challenges are delayed.`);
 
         // If the referee is V2
         if (refereeIsV2) {
             // If referee calculations address is not set, set it
-            if(operatorState.refereeCalculationsAddress === ""){
+            if (operatorState.refereeCalculationsAddress === "") {
                 try {
                     operatorState.refereeCalculationsAddress = await getRefereeCalculationsAddress();
                 } catch (error) {
