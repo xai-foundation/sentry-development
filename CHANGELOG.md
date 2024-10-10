@@ -1,3 +1,15 @@
+# [1.3.0](https://github.com/xai-foundation/sentry-development/compare/1.2.1...1.3.0) (2024-10-10)
+
+
+### Bug Fixes
+
+* **cli:** Fix dev mode start from graph ([1aa4486](https://github.com/xai-foundation/sentry-development/commit/1aa4486eae73ba7e5cd27ffa49e7820d06fb444f))
+* **cli:** Update logs for public node compare ([02c3d62](https://github.com/xai-foundation/sentry-development/commit/02c3d62f2ad99e3568f575b9d15f82f72b1df1f1))
+* **operator:** Update version switch logic ([32d4270](https://github.com/xai-foundation/sentry-development/commit/32d4270dabe47430f7f3daafc52917a8976275f8))
+
+
+### Features
+
 ## [1.2.1](https://github.com/xai-foundation/sentry-development/compare/1.2.0...1.2.1) (2024-10-06)
 
 
