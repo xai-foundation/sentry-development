@@ -124,7 +124,7 @@ export const bootOperatorRuntime = async (
     } else {
         closeChallengeListener = listenForChallenges(listenForChallengesCallback)
         // If the subgraph is not healthy
-        operatorState.cachedLogger(`Revert to RPC call instead of using subgraph. Subgraph status error: ${graphStatus.error}`);
+        operatorState.cachedLogger(`Revert to RPC call instead of using subgraph. Subgraph status error: DEV_MODE_MANUAL_BOOT`);
 
         // Check if the referee has been upgraded to V2
         const refereeIsV2 = await checkRefereeBulkSubmissionCompatible();
