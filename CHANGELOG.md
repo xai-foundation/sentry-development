@@ -1,3 +1,16 @@
+# [1.4.0](https://github.com/xai-foundation/sentry-development/compare/1.3.0...1.4.0) (2024-10-11)
+
+
+### Bug Fixes
+
+* **cli, desktop:** fix check referee version by RPC ([4f903a1](https://github.com/xai-foundation/sentry-development/commit/4f903a1de35ed3a58d0bd2aca71de6178158ee7d))
+
+
+### Features
+
+* **cli, desktop:** Add check for operator version check introducing bulk submission compatibility ([de7b261](https://github.com/xai-foundation/sentry-development/commit/de7b2618f947e8febb365d08a864ac34dd4cfaf0))
+* **desktop:** Add wallet based table view to operator desktop client ([bf45d0d](https://github.com/xai-foundation/sentry-development/commit/bf45d0d1691da77ed8efd01931aff21bf3d1d381))
+
 # [1.3.0](https://github.com/xai-foundation/sentry-development/compare/1.2.1...1.3.0) (2024-10-10)
 
 
