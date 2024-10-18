@@ -1133,6 +1133,13 @@ contract Referee16 is Initializable, AccessControlEnumerableUpgradeable {
 			}
 		}
     }
+    
+    function closeCurrentChallenge() external {
+        Challenge storage currentChallenge = challenges[challengeCounter - 1];
+        require(block.timestamp >= currentChallenge.createdTimestamp + 50 minutes, "59");
+        currentChallenge.openForSubmissions = false;
+        // Not emitting an event as it will be emitted when the next challenge is submitted
+    }
 
     function isRefereeBulkSubmission() external view returns (bool isBeforeBulk) {
         isBeforeBulk = isBeforeBulkState;
