@@ -61,6 +61,7 @@ export async function getUserStakedPoolsFromGraph(
           metadata
           totalStakedKeyAmount
           totalStakedEsXaiAmount
+          totalAccruedAssertionRewards
           ${submissionQuery}
         }
       }
@@ -71,6 +72,7 @@ export async function getUserStakedPoolsFromGraph(
   return result.poolStakes.map(s => ({
     address: s.pool.address,
     name: s.pool.metadata[0],
+    logoUri: s.pool.metadata[2],
     isPool: true,
     keyCount: s.pool.totalStakedKeyAmount,
     bulkSubmissions: s.pool.submissions,

@@ -3,6 +3,8 @@ import {loadFixture} from "@nomicfoundation/hardhat-network-helpers";
 import {winningHashForNodeLicense0} from "./AssertionData.mjs";
 import {Contract} from "ethers";
 import {submitTestChallenge} from "./utils/submitTestChallenge.mjs";
+import { createMockRollupNodes, confirmMockRollupNodes } from "./utils/mockRollupHelpers.mjs";
+import {submitMockRollupChallenge} from "./utils/submitMockRollupChallenge.mjs";
 import {mintBatchedLicenses, mintSingleLicense} from "./utils/mintLicenses.mjs";
 import {createPool} from "./utils/createPool.mjs";
 
@@ -350,7 +352,8 @@ export function RefereeTests(deployInfrastructure) {
 			const {referee, operator, challenger, esXai, addr1, nodeLicense} = await loadFixture(deployInfrastructure);
 
 			// Mint 200 licenses so that a reward will be most likely guaranteed
-			 await mintBatchedLicenses(200, nodeLicense, addr1);
+			let keysToMint = 20000;
+			await mintBatchedLicenses(keysToMint, nodeLicense, addr1);
 
 			// Submit a challenge
 			await referee.connect(challenger).submitChallenge(
@@ -549,6 +552,469 @@ export function RefereeTests(deployInfrastructure) {
 			assert.equal(submission[0], false, "Submission was created with invalid successorRoot");
 		});
 
+		it("Check creating a node on mock rollup", async function () {
+			const {referee, mockRollup} = await loadFixture(deployInfrastructure);
+			
+			//create mock rollup nodes
+			let currentAssertion = 2;
+			let previousAssertion = 0;
+			const createRes = await createMockRollupNodes(
+				referee, 
+				mockRollup,
+				currentAssertion,
+				previousAssertion
+			);
+
+			//assert trxs contain NodeCreated event
+			for (let i = 0; i < createRes.transactions.length; i++) {
+				let trxReceipt = await createRes.transactions[i].wait();
+				assert.equal(trxReceipt.logs[0].fragment.name, "NodeCreated", "NodeCreated event not found");
+			}
+		});
+
+		it("Check confirming a node on mock rollup", async function () {
+			const {referee, mockRollup, refereeCalculations} = await loadFixture(deployInfrastructure);
+			
+			//create mock rollup nodes
+			let currentAssertion = 2;
+			let previousAssertion = 0;
+			const createRes = await createMockRollupNodes(
+				referee, 
+				mockRollup,
+				currentAssertion,
+				previousAssertion
+			);
+
+			//confirm mock rollup nodes
+			let confirmRes = await confirmMockRollupNodes(
+				referee,
+				mockRollup,
+				refereeCalculations,
+				currentAssertion,
+				previousAssertion
+			);
+
+			//assert transactions contain NodeConfirmed event
+			for (let i = 0; i < confirmRes.transactions.length; i++) {
+				let trxReceipt = await confirmRes.transactions[i].wait();
+				let hexStr = "0x" + BigInt(i + 1).toString(16).padStart(64, "0");
+				assert.equal(trxReceipt.logs[0].fragment.name, "NodeConfirmed", "NodeConfirmed event not found");
+			    assert.equal(trxReceipt.logs[0].args[0], createRes.assertions[i], "nodeNum event param mismatch");
+				assert.equal(trxReceipt.logs[0].args[1], hexStr, "blockHash event param mismatch");
+			    assert.equal(trxReceipt.logs[0].args[2], hexStr, "sendRoot event param mismatch");
+			}
+		});
+
+		it("Check submitting a test challenge to mock rollup contract", async function () {
+			//NOTE: this test requires the following functions to exist on the Referee contract:
+			//toggleAssertionChecking()
+			//setRollupAddress(address newRollupAddress)
+			
+			const {referee, challenger, mockRollup, refereeCalculations} = await loadFixture(deployInfrastructure);
+			let currentAssertion = 2;
+			let previousAssertion = 0;
+			const res = await submitMockRollupChallenge(
+				referee, 
+				challenger, 
+				mockRollup, 
+				refereeCalculations, 
+				currentAssertion,
+				previousAssertion,
+				null,
+				null
+			);
+
+			for (let i = 0; i < res.confirmData.length; i++) {
+				assert.equal(res.confirmData[i], res.nodes[i][2], "confirmData mismatch");
+			}
+		});
+
+		it("Check submitting a challenge with an invalid assertion block timestamp", async function () {
+			//NOTE: this test requires the following functions to exist on the Referee contract:
+			//toggleAssertionChecking()
+			//setRollupAddress(address newRollupAddress)
+			
+			const {referee, challenger, mockRollup, refereeCalculations} = await loadFixture(deployInfrastructure);
+			let currentAssertion = 2;
+			let previousAssertion = 0;
+			await expect(
+				submitMockRollupChallenge(
+					referee, 
+					challenger, 
+					mockRollup, 
+					refereeCalculations, 
+					currentAssertion,
+					previousAssertion,
+					null,
+					10
+				)
+			).to.be.revertedWith("12");
+		});
+
+		it("Check failure to confirm node with wrong blockhash and sendroot", async function () {
+			const {referee, challenger, mockRollup, refereeCalculations} = await loadFixture(deployInfrastructure);
+			
+			//submit mock rollup challenge
+			let currentAssertion = 2;
+			let previousAssertion = 0;
+			await submitMockRollupChallenge(
+				referee, 
+				challenger, 
+				mockRollup, 
+				refereeCalculations, 
+				currentAssertion,
+				previousAssertion,
+				null,
+				null
+			);
+
+			//attempt to confirm nodes
+			for (let i = previousAssertion + 1; i <= currentAssertion; i++) {
+				let badHexStr = "0x" + BigInt(i + 1).toString(16).padStart(64, "0");
+				await expect(
+				    mockRollup.confirmNode(
+					    i,
+						badHexStr,
+						badHexStr
+				    )
+			    ).to.be.revertedWith("CONFIRM_DATA");
+			}
+		});
+
+		it("Check failure to submit a challenge with a skipped previous assertion id", async function () {
+			//NOTE: this test requires the following functions to exist on the Referee contract:
+			//toggleAssertionChecking()
+			//setRollupAddress(address newRollupAddress)
+			
+			const {referee, challenger, mockRollup, refereeCalculations} = await loadFixture(deployInfrastructure);
+			let currentAssertion = 2;
+			let previousAssertion = 1;
+			await expect(
+				submitMockRollupChallenge(
+					referee, 
+					challenger, 
+					mockRollup, 
+					refereeCalculations, 
+					currentAssertion,
+					previousAssertion,
+					"0x0000000000000000000000000000000000000000000000000000000000000020",
+					null
+				)
+			).to.be.revertedWith("10");
+		});
+
+		it("Check failure to submit a challenge with invalid confirmData", async function () {
+			//NOTE: this test requires the following functions to exist on the Referee contract:
+			//toggleAssertionChecking()
+			//setRollupAddress(address newRollupAddress)
+			
+			const {referee, challenger, mockRollup, refereeCalculations} = await loadFixture(deployInfrastructure);
+			let currentAssertion = 2;
+			let previousAssertion = 0;
+			await expect(
+				submitMockRollupChallenge(
+					referee, 
+					challenger, 
+					mockRollup, 
+					refereeCalculations, 
+					currentAssertion,
+					previousAssertion,
+					"0x0000000000000000000000000000000000000000000000000000000000000020",
+					null
+				)
+			).to.be.revertedWith("11");
+		});
+
+		it("Check rewards calculations are correct for 1 hour periods", async function () {
+			const {
+				referee, 
+				challenger, 
+				mockRollup, 
+				refereeCalculations, 
+				xai, 
+				xaiMinter, 
+				addr1
+			} = await loadFixture(deployInfrastructure);
+
+			const tier1 = ethers.parseEther("1250000000");
+			const tier1Emission = tier1 / 17520n; //71347031963472194634703n
+			const tier2 = tier1 / 2n;
+			const tier2Emission = tier1Emission / 2n; //35673515981735159817351n
+			
+			//get combined total supply of xai and esXai
+			let combinedTotalSupply = await referee.getCombinedTotalSupply();
+			assert.equal(combinedTotalSupply, 0n, "Unexpected starting supply");
+			
+			//mint Xai to establish emission tiers
+			const xaiToMint = ethers.parseEther("1240000000"); //slightly less so we're still in tier 1
+			await xai.connect(xaiMinter).mint(addr1, xaiToMint);
+
+			//check emissions and tier again
+			combinedTotalSupply = await referee.getCombinedTotalSupply();
+			assert.equal(combinedTotalSupply, xaiToMint, "Unexpected supply");
+		    
+			// Submit a challenge
+			let currentAssertion = 2;
+			let previousAssertion = 0;
+			await submitMockRollupChallenge(
+				referee, 
+				challenger, 
+				mockRollup, 
+				refereeCalculations, 
+				currentAssertion,
+				previousAssertion,
+				null,
+				null
+			);
+
+			//get challenge data
+			let challenge = await referee.challenges(0);
+			let totalEmission = challenge[10] + challenge[11]; //reward + gas subsidy
+			
+			// Call calculateChallengeEmissionAndTier function and it will return the expected emission for the time passed since the last challenge
+			const calculateRes = await referee.calculateChallengeEmissionAndTier();
+			assert.equal(calculateRes[0], tier1Emission, "Unexpected Emissions calculation");
+			assert.equal(calculateRes[1], tier1, "Unexpected Tier calculation");
+			assert.equal(totalEmission, tier1Emission, "Unexpected Challenge Emission");
+
+			// Wait some time
+			const blockOffset = 8;
+			await ethers.provider.send("evm_increaseTime", [3600 - blockOffset]); //3600 seconds = 1 hour
+			await ethers.provider.send("evm_mine"); //mine block to apply new time
+
+			//mint more xai to cross into next tier
+			const xaiToMintTier2 = ethers.parseEther("625000000");
+			await xai.connect(xaiMinter).mint(addr1, xaiToMintTier2);
+			
+			// Submit another challenge
+			currentAssertion = 4;
+			previousAssertion = 2;
+			await submitMockRollupChallenge(
+				referee, 
+				challenger, 
+				mockRollup, 
+				refereeCalculations, 
+				currentAssertion,
+				previousAssertion,
+				null,
+				null
+			);
+
+			//get challenge data
+			challenge = await referee.challenges(1);
+			totalEmission = challenge[10] + challenge[11]; //reward + gas subsidy
+			
+			// Check the emission values based off of the time and emission values formula
+			const calculateRes2 = await referee.calculateChallengeEmissionAndTier();
+			assert.equal(calculateRes2[0], tier2Emission, "Unexpected Emissions calculation");
+			assert.equal(calculateRes2[1], tier2, "Unexpected Tier calculation");
+			assert.equal(totalEmission, tier2Emission, "Unexpected Challenge Emission");
+		});
+
+		it("Check rewards calculations are correct over varying time periods", async function () {
+			const {
+				referee, 
+				challenger, 
+				mockRollup, 
+				refereeCalculations, 
+				xai, 
+				xaiMinter, 
+				addr1
+			} = await loadFixture(deployInfrastructure);
+
+			const tier1 = ethers.parseEther("1250000000");
+			const tier1Emission = tier1 / 17520n; //71347031963472194634703n
+			const tier2 = tier1 / 2n;
+			const tier2Emission = tier1Emission / 2n; //35673515981735159817351n
+			
+			//get combined total supply of xai and esXai
+			let combinedTotalSupply = await referee.getCombinedTotalSupply();
+			assert.equal(combinedTotalSupply, 0n, "Unexpected starting supply");
+			
+			//mint Xai to establish emission tiers
+			const xaiToMint = ethers.parseEther("1240000000"); //slightly less so we're still in tier 1
+			await xai.connect(xaiMinter).mint(addr1, xaiToMint);
+
+			//check emissions and tier again
+			combinedTotalSupply = await referee.getCombinedTotalSupply();
+			assert.equal(combinedTotalSupply, xaiToMint, "Unexpected supply");
+		    
+			// Submit a challenge
+			let currentAssertion = 2;
+			let previousAssertion = 0;
+			await submitMockRollupChallenge(
+				referee, 
+				challenger, 
+				mockRollup, 
+				refereeCalculations, 
+				currentAssertion,
+				previousAssertion,
+				null,
+				null
+			);
+
+			//get challenge data
+			let challenge = await referee.challenges(0);
+			let totalEmission = challenge[10] + challenge[11]; //reward + gas subsidy
+			
+			// Call calculateChallengeEmissionAndTier function and it will return the expected emission for the time passed since the last challenge
+			const calculateRes = await referee.calculateChallengeEmissionAndTier();
+			assert.equal(calculateRes[0], tier1Emission, "Unexpected Emissions calculation");
+			assert.equal(calculateRes[1], tier1, "Unexpected Tier calculation");
+			assert.equal(totalEmission, tier1Emission, "Unexpected Challenge Emission");
+
+			// Wait some time
+			let blockOffset = 8;
+			const twoHoursSeconds = 7200; //2 hours
+			await ethers.provider.send("evm_increaseTime", [twoHoursSeconds - blockOffset]);
+			await ethers.provider.send("evm_mine"); //mine block to apply new time
+
+			//mint more xai to cross into next tier
+			const xaiToMintTier2 = ethers.parseEther("625000000");
+			await xai.connect(xaiMinter).mint(addr1, xaiToMintTier2);
+			
+			// Submit another challenge
+			currentAssertion = 4;
+			previousAssertion = 2;
+			await submitMockRollupChallenge(
+				referee, 
+				challenger, 
+				mockRollup, 
+				refereeCalculations, 
+				currentAssertion,
+				previousAssertion,
+				null,
+				null
+			);
+
+			//get challenge data
+			challenge = await referee.challenges(1);
+			totalEmission = challenge[10] + challenge[11]; //reward + gas subsidy
+			
+			// Check the emission values based off of the time and emission values formula
+			const calculateRes2 = await referee.calculateChallengeEmissionAndTier();
+			assert.equal(calculateRes2[0], tier2Emission, "Unexpected Emissions calculation");
+			assert.equal(calculateRes2[1], tier2, "Unexpected Tier calculation");
+			assert.equal(totalEmission, tier2Emission * 2n, "Unexpected Challenge Emission");
+
+			// Wait some time
+			const blockOffset2 = 7;
+			const tenHoursSeconds = 36000; //10 hours
+			await ethers.provider.send("evm_increaseTime", [tenHoursSeconds - blockOffset2]);
+			await ethers.provider.send("evm_mine"); //mine block to apply new time
+			
+			// Submit another challenge
+			currentAssertion = 6;
+			previousAssertion = 4;
+			await submitMockRollupChallenge(
+				referee, 
+				challenger, 
+				mockRollup, 
+				refereeCalculations, 
+				currentAssertion,
+				previousAssertion,
+				null,
+				null
+			);
+
+			//get challenge data
+			challenge = await referee.challenges(2);
+			totalEmission = challenge[10] + challenge[11]; //reward + gas subsidy
+			
+			// Check the emission values based off of the time and emission values formula
+			const calculateRes3 = await referee.calculateChallengeEmissionAndTier();
+			assert.equal(calculateRes3[0], tier2Emission, "Unexpected Emissions calculation");
+			assert.equal(calculateRes3[1], tier2, "Unexpected Tier calculation");
+			assert.equal(totalEmission, tier2Emission * 10n, "Unexpected Challenge Emission");
+
+			// Wait some time
+			const thirtyMinsSeconds = 1800; //30 mins
+			await ethers.provider.send("evm_increaseTime", [thirtyMinsSeconds - blockOffset2]);
+			await ethers.provider.send("evm_mine"); //mine block to apply new time
+			
+			// Submit another challenge
+			currentAssertion = 8;
+			previousAssertion = 6;
+			await submitMockRollupChallenge(
+				referee, 
+				challenger, 
+				mockRollup, 
+				refereeCalculations, 
+				currentAssertion,
+				previousAssertion,
+				null,
+				null
+			);
+
+			//get challenge data
+			challenge = await referee.challenges(3);
+			totalEmission = challenge[10] + challenge[11]; //reward + gas subsidy
+			
+			// Check the emission values based off of the time and emission values formula
+			const calculateRes4 = await referee.calculateChallengeEmissionAndTier();
+			assert.equal(calculateRes4[0], tier2Emission, "Unexpected Emissions calculation");
+			assert.equal(calculateRes4[1], tier2, "Unexpected Tier calculation");
+			assert.equal(totalEmission, tier2Emission / 2n, "Unexpected Challenge Emission");
+
+			// Wait some time
+			const oneMinSeconds = 60; //1 minute
+			await ethers.provider.send("evm_increaseTime", [oneMinSeconds - blockOffset2]);
+			await ethers.provider.send("evm_mine"); //mine block to apply new time
+			
+			// Submit another challenge
+			currentAssertion = 10;
+			previousAssertion = 8;
+			await submitMockRollupChallenge(
+				referee, 
+				challenger, 
+				mockRollup, 
+				refereeCalculations, 
+				currentAssertion,
+				previousAssertion,
+				null,
+				null
+			);
+
+			//get challenge data
+			challenge = await referee.challenges(4);
+			totalEmission = challenge[10] + challenge[11]; //reward + gas subsidy
+			
+			// Check the emission values based off of the time and emission values formula
+			const calculateRes5 = await referee.calculateChallengeEmissionAndTier();
+			assert.equal(calculateRes5[0], tier2Emission, "Unexpected Emissions calculation");
+			assert.equal(calculateRes5[1], tier2, "Unexpected Tier calculation");
+			assert.equal(totalEmission, tier2Emission / 60n, "Unexpected Challenge Emission");
+
+			// Wait some time
+			const thirtySeconds = 30; //30 seconds
+			await ethers.provider.send("evm_increaseTime", [thirtySeconds - blockOffset2]);
+			await ethers.provider.send("evm_mine"); //mine block to apply new time
+			
+			// Submit another challenge
+			currentAssertion = 12;
+			previousAssertion = 10;
+			await submitMockRollupChallenge(
+				referee, 
+				challenger, 
+				mockRollup, 
+				refereeCalculations, 
+				currentAssertion,
+				previousAssertion,
+				null,
+				null
+			);
+
+			//get challenge data
+			challenge = await referee.challenges(5);
+			totalEmission = challenge[10] + challenge[11]; //reward + gas subsidy
+			
+			// Check the emission values based off of the time and emission values formula
+			const calculateRes6 = await referee.calculateChallengeEmissionAndTier();
+			assert.equal(calculateRes6[0], tier2Emission, "Unexpected Emissions calculation");
+			assert.equal(calculateRes6[1], tier2, "Unexpected Tier calculation");
+			assert.equal(totalEmission, tier2Emission / 120n, "Unexpected Challenge Emission");
+		});
+		
 		// describe("The Referee should allow users to stake in V1", function () {
 
 		//     it("Check that staked/unstaked amount is taken/given from user's esXai balance", async function () {

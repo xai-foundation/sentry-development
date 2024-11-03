@@ -6,16 +6,26 @@ import { Config, WagmiProvider } from 'wagmi'
 import { Chain } from 'viem'
 import { createWeb3Modal } from "@web3modal/wagmi/react"
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { arbitrum } from 'wagmi/chains'
+import { arbitrum, arbitrumSepolia } from 'wagmi/chains'
 import './index.css'
 import { IpLocationChecker } from './features/ipchecker/IpLocationChecker'
+import  xaiThumbnail  from './assets/images/xai-preview.jpg'
+import { Helmet, HelmetProvider } from 'react-helmet-async';
 
-const projectId = '8f5121741edc292ac7e4203b648d61e2'
+const helmetContext = {};
+
+const projectId = '79e38b4593d43c78d7e9ee38f0cdf4ee'
+const { VITE_APP_ENV } = import.meta.env
+const environment = VITE_APP_ENV === "development" ? "development" : "production";
 
 export const chains: [Chain, ...Chain[]] = [
 	arbitrum as Chain,
-	// arbitrumSepolia as Chain
 ]
+
+if(environment === "development") {
+	chains.push(arbitrumSepolia as Chain)
+}
+
 
 const queryClient = new QueryClient()
 
@@ -31,18 +41,10 @@ export const wagmiConfig = defaultWagmiConfig({
 	projectId, // required
 	metadata, // required
 	ssr: true,
-	// storage: createStorage({
-	//     storage: cookieStorage
-	// }),
-	// transports: {
-	// 	[arbitrum.id]: http(),
-	// 	[arbitrumSepolia.id]: http(),
-	// },
 	enableWalletConnect: true, // Optional - true by default
 	enableInjected: true, // Optional - true by default
 	enableEIP6963: true, // Optional - true by default
 	enableCoinbase: true, // Optional - true by default
-	// ...wagmiOptions // Optional - Override createConfig parameters
 })
 
 createWeb3Modal({
@@ -51,13 +53,30 @@ createWeb3Modal({
 })
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-	<WagmiProvider config={wagmiConfig as Config}>
-		<QueryClientProvider client={queryClient}>
-			<React.StrictMode>
-				<IpLocationChecker>
-					<AppRoutes />
-				</IpLocationChecker>
-			</React.StrictMode>
-		</QueryClientProvider>
-	</WagmiProvider>
+	
+	<HelmetProvider context={helmetContext}>
+		<WagmiProvider config={wagmiConfig as Config}>
+			<Helmet>		
+				<meta name="title" property="og:title" content="Xai Sentry Node"/>
+				<meta name="description" property="og:description" content="Xai Sentry Node Key Sale Page"/>
+				<meta name="image" property="og:image" content={xaiThumbnail}/>
+				<meta name="url" property="og:url" content="https://sentry.xai.games"/>
+				<meta name="type" property="og:type" content="website"/>
+			
+				<meta name="twitter:card" content="summary_large_image"/>
+				<meta name="twitter:site" content="https://sentry.xai.games"/>
+				<meta name="twitter:title" content="Xai Sentry Node"/>
+				<meta name="twitter:description" content="Xai Sentry Node Key Sale Page"/>
+				<meta name="twitter:image" content={xaiThumbnail}/>
+				<meta name="twitter:creator" content="@xai_games"/>
+			</Helmet>
+			<QueryClientProvider client={queryClient}>
+				<React.StrictMode>
+					<IpLocationChecker>
+						<AppRoutes />
+					</IpLocationChecker>
+				</React.StrictMode>
+			</QueryClientProvider>
+		</WagmiProvider>
+	</HelmetProvider>
 )
