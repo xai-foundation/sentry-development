@@ -10,9 +10,10 @@ async function main() {
     const [deployer] = (await ethers.getSigners());
     const deployerAddress = await deployer.address;
     console.log("Deployer address", deployerAddress);
-    const poolFactory = await ethers.getContractFactory(contractPath);
+    const PoolFactory10 = await ethers.getContractFactory(contractPath);
     console.log("Got factory");
-    await upgrades.upgradeProxy(address, poolFactory);
+
+    await upgrades.upgradeProxy(address, PoolFactory10, { call: { fn: "initialize", args: [12] } });
     console.log("Upgraded");
 
 
