@@ -70,7 +70,7 @@ export function handleStakeKeys(event: StakeKeys): void {
   const poolConfig = PoolFactoryConfig.load("PoolFactoryConfig");
 
   const version = poolConfig ? poolConfig.version : BigInt.fromI32(0);
-  if (version.gt(BigInt.fromI32(1))) {
+  if (version.gt(BigInt.fromI32(11))) {
     return;
   }
 
@@ -156,9 +156,8 @@ export function handleStakeKeys(event: StakeKeys): void {
 export function handleUnstakeKeys(event: UnstakeKeys): void {
   
   const poolConfig = PoolFactoryConfig.load("PoolFactoryConfig");
-
   const version = poolConfig ? poolConfig.version : BigInt.fromI32(0);
-  if (version.gt(BigInt.fromI32(1))) {
+  if (version.gt(BigInt.fromI32(11))) {
     return;
   }
 
@@ -230,9 +229,8 @@ export function handleUnstakeKeys(event: UnstakeKeys): void {
 export function handlePoolCreated(event: PoolCreated): void {
 
   const poolConfig = PoolFactoryConfig.load("PoolFactoryConfig");
-
   const version = poolConfig ? poolConfig.version : BigInt.fromI32(0);
-  if (version.gt(BigInt.fromI32(1))) {
+  if (version.gt(BigInt.fromI32(11))) {
     return;
   }
 
@@ -346,9 +344,8 @@ export function handleStakeEsXai(event: StakeEsXai): void {
 export function handleUnstakeEsXai(event: UnstakeEsXai): void {
 
   const poolConfig = PoolFactoryConfig.load("PoolFactoryConfig");
-
   const version = poolConfig ? poolConfig.version : BigInt.fromI32(0);
-  if (version.gt(BigInt.fromI32(1))) {
+  if (version.gt(BigInt.fromI32(11))) {
     return;
   }
 
@@ -406,7 +403,7 @@ export function handleUpdateMetadata(event: UpdateMetadata): void {
   const poolConfig = PoolFactoryConfig.load("PoolFactoryConfig");
 
   const version = poolConfig ? poolConfig.version : BigInt.fromI32(0);
-  if (version.gt(BigInt.fromI32(1))) {
+  if (version.gt(BigInt.fromI32(11))) {
     return;
   }
 
@@ -433,7 +430,7 @@ export function handleUpdatePendingShares(event: UpdateShares): void {
   const poolConfig = PoolFactoryConfig.load("PoolFactoryConfig");
 
   const version = poolConfig ? poolConfig.version : BigInt.fromI32(0);
-  if (version.gt(BigInt.fromI32(1))) {
+  if (version.gt(BigInt.fromI32(11))) {
     return;
   }
 
