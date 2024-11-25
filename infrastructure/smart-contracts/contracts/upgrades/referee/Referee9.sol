@@ -63,6 +63,7 @@ import "../../RefereeCalculations.sol";
 // 48: Not owner of key.
 // 49: Maximum staking amount exceeded.
 // 50: Invalid amount.
+// 51: Cannot submit for airdropped key
 
 contract Referee9 is Initializable, AccessControlEnumerableUpgradeable {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
@@ -70,6 +71,9 @@ contract Referee9 is Initializable, AccessControlEnumerableUpgradeable {
     // Define roles
     bytes32 public constant CHALLENGER_ROLE = keccak256("CHALLENGER_ROLE");
     bytes32 public constant KYC_ADMIN_ROLE = keccak256("KYC_ADMIN_ROLE");
+
+    // Used to not allow submissions for keys airdropped by the TK Airdrop
+    uint256 public constant MAX_KEY_SOLO_SUBMISSION = 35180;
 
     // The Challenger's public key of their registered BLS-Pair
     bytes public challengerPublicKey;
@@ -201,7 +205,7 @@ contract Referee9 is Initializable, AccessControlEnumerableUpgradeable {
     event RewardsClaimed(uint256 indexed challengeId, uint256 amount);
     event BatchRewardsClaimed(uint256 indexed challengeId, uint256 totalReward, uint256 keysLength);
     event ChallengeExpired(uint256 indexed challengeId);
-    event StakingEnabled();
+    event StakingEnabled(bool enabled);
     event UpdateMaxStakeAmount(uint256 prevAmount, uint256 newAmount);
     event UpdateMaxKeysPerPool(uint256 prevAmount, uint256 newAmount);
     event StakedV1(address indexed user, uint256 amount, uint256 totalStaked);
@@ -534,6 +538,8 @@ contract Referee9 is Initializable, AccessControlEnumerableUpgradeable {
         bytes memory _confirmData
     ) public {
 
+        require(_nodeLicenseId <= MAX_KEY_SOLO_SUBMISSION, "51");
+
         // Check the challenge is open for submissions
         require(challenges[_challengeId].openForSubmissions, "14");
         
@@ -571,7 +577,8 @@ contract Referee9 is Initializable, AccessControlEnumerableUpgradeable {
 
 		for (uint256 i = 0; i < keyLength; i++) {
             uint256 _nodeLicenseId = _nodeLicenseIds[i];
-            if (!submissions[_challengeId][_nodeLicenseId].submitted) {
+            
+            if(_nodeLicenseId <= MAX_KEY_SOLO_SUBMISSION && !submissions[_challengeId][_nodeLicenseId].submitted) {
                 
                 address licenseOwner = NodeLicense(nodeLicenseAddress).ownerOf(_nodeLicenseId);
                 address assignedPool = assignedKeyToPool[_nodeLicenseId];
@@ -832,6 +839,16 @@ contract Referee9 is Initializable, AccessControlEnumerableUpgradeable {
 
         // Emit the ChallengeExpired event
         emit ChallengeExpired(_challengeId);
+    }
+
+    /**
+     * @dev Admin function to enable or disable staking.
+     * @param enabled The new staking status.
+     */
+    function setStakingEnabled(bool enabled) external {
+        require(msg.sender == nodeLicenseAddress, "56");
+        stakingEnabled = enabled;
+        emit StakingEnabled(enabled);
     }
 
     /**

@@ -19,7 +19,7 @@ import { useNetworkConfig } from '@/hooks/useNetworkConfig';
  */
 export function ActionSection(): JSX.Element {
     const [creditCardOpen, setCreditCardOpen] = useState(false);
-    const { isDevelopment} = useNetworkConfig();
+    const { isDevelopment } = useNetworkConfig();
 
     // Destructure values and functions from the context
     const {
@@ -75,7 +75,7 @@ export function ActionSection(): JSX.Element {
                         btnText={getEthButtonText()}
                     />
                     <br />
-                    { isConnected && <PrimaryButton
+                    {isConnected && <PrimaryButton
                         onClick={() => setCreditCardOpen(true)}
                         className={`w-full h-16 ${ready ? "bg-[#F30919] global-clip-path" : "bg-gray-400 cursor-default !text-[#726F6F]"} text-lg text-hornetSting p-2 uppercase font-bold `}
                         isDisabled={!ready || !isConnected}
@@ -169,8 +169,7 @@ export function ActionSection(): JSX.Element {
                         </BaseCallout>
                     </div>
                 )}
-
-            </div>
+            </div>            
             <CrossmintModal
                 totalPriceInEth={formatWeiToEther(calculateTotalPrice(), 18).toString()}
                 isOpen={creditCardOpen}
