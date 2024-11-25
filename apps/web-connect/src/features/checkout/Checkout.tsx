@@ -50,12 +50,12 @@ export function Checkout() {
         window.location.reload();
     }
 
-	useEffect(() => {
-		if (!stakingTabOpened && (mintWithEth.isSuccess || mintWithXai.isSuccess || mintWithCrossmint.txHash != "")) {	
+    useEffect(() => {
+        if (!stakingTabOpened && (mintWithEth.isSuccess || mintWithXai.isSuccess || mintWithCrossmint.txHash != "")) {
             setStakingTabOpened(true);
-			window.open(stakingPageURL, '_blank');
-		}
-	}, [mintWithEth.isSuccess, mintWithXai.isSuccess, mintWithCrossmint.txHash]);
+            window.open(stakingPageURL, '_blank');
+        }
+    }, [mintWithEth.isSuccess, mintWithXai.isSuccess, mintWithCrossmint.txHash]);
 
     return (
         <div>

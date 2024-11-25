@@ -19,13 +19,13 @@ import { useNetworkConfig } from '@/hooks/useNetworkConfig';
  */
 export function ActionSection(): JSX.Element {
     const [creditCardOpen, setCreditCardOpen] = useState(false);
-    const { isDevelopment} = useNetworkConfig();
+    const { isDevelopment } = useNetworkConfig();
 
     // Destructure values and functions from the context
     const {
         currency,
         ready,
-        chain,
+        chainId,
         userHasTokenBalance,
         mintWithEth,
         mintWithXai,
@@ -50,9 +50,9 @@ export function ActionSection(): JSX.Element {
      */
     const getTokenButtonText = useCallback(() => {
         if (mintWithEth.isPending || mintWithXai.isPending || approve.isPending) return "WAITING FOR CONFIRMATION..";
-        if (!isValidNetwork(chain?.id, isDevelopment)) return "Please Switch to Arbitrum";
+        if (!isValidNetwork(chainId, isDevelopment)) return "Please Switch to Arbitrum";
         return getApproveButtonText();
-    }, [mintWithEth.isPending, mintWithXai.isPending, approve.isPending, chain, getApproveButtonText]);
+    }, [mintWithEth.isPending, mintWithXai.isPending, approve.isPending, chainId, getApproveButtonText]);
 
     const handleBuyWithXaiClicked = async () => { 
         if (getTokenButtonText().startsWith("Approve")) {
@@ -71,11 +71,11 @@ export function ActionSection(): JSX.Element {
                     <PrimaryButton
                         onClick={() => handleMintWithEthClicked()}
                         className={`w-full h-16 ${ready ? "bg-[#F30919] global-clip-path" : "bg-gray-400 cursor-default !text-[#726F6F]"} text-lg text-white p-2 uppercase font-bold`}
-                        isDisabled={!ready || !isValidNetwork(chain?.id, isDevelopment) || getEthButtonText().startsWith("Insufficient") || !isConnected}
+                        isDisabled={!ready || !isValidNetwork(chainId, isDevelopment) || getEthButtonText().startsWith("Insufficient") || !isConnected}
                         btnText={getEthButtonText()}
                     />
                     <br />
-                    { isConnected && <PrimaryButton
+                    {isConnected && <PrimaryButton
                         onClick={() => setCreditCardOpen(true)}
                         className={`w-full h-16 ${ready ? "bg-[#F30919] global-clip-path" : "bg-gray-400 cursor-default !text-[#726F6F]"} text-lg text-hornetSting p-2 uppercase font-bold `}
                         isDisabled={!ready || !isConnected}
@@ -88,7 +88,7 @@ export function ActionSection(): JSX.Element {
                     <PrimaryButton
                         onClick={handleBuyWithXaiClicked}
                         className={`w-full h-16 ${ready ? "bg-[#F30919] global-clip-path" : "bg-gray-400 cursor-default !text-[#726F6F]"} text-lg text-white p-2 uppercase font-bold`}
-                        isDisabled={!ready || !isValidNetwork(chain?.id, isDevelopment) || !userHasTokenBalance || !isConnected}
+                        isDisabled={!ready || !isValidNetwork(chainId, isDevelopment) || !userHasTokenBalance || !isConnected}
                         btnText={getTokenButtonText()}
                     />
                 )}
@@ -169,8 +169,7 @@ export function ActionSection(): JSX.Element {
                         </BaseCallout>
                     </div>
                 )}
-
-            </div>
+            </div>            
             <CrossmintModal
                 totalPriceInEth={formatWeiToEther(calculateTotalPrice(), 18).toString()}
                 isOpen={creditCardOpen}
